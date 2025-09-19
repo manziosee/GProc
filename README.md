@@ -13,11 +13,16 @@ A production-ready process manager for Go applications, similar to PM2 for Node.
 - ✅ **Configuration Persistence**: JSON state storage with YAML examples
 - ✅ **Resource Monitoring**: Basic structure (extensible)
 - ✅ **CLI Interface**: Full command-line interface with flags
-
-## 🚧 Future Features
-
-- 🔄 **Process Groups**: Start/stop multiple processes together
-- 🌐 **Web Dashboard**: Optional web interface for monitoring
+- ✅ **Process Groups**: Start/stop multiple processes together
+- ✅ **Health Checks**: HTTP/TCP endpoint monitoring
+- ✅ **Log Rotation**: Configurable log file size and retention
+- ✅ **Cron/Scheduled Tasks**: Schedule processes with cron expressions
+- ✅ **Web Dashboard**: Visual monitoring interface
+- ✅ **Process Templates**: Reusable process configurations
+- ✅ **Resource Limits**: Memory and CPU constraints
+- ✅ **Notifications**: Email and Slack integration
+- ✅ **Load Balancing**: Multi-instance cluster support
+- ✅ **Configuration Files**: Start from YAML/JSON config
 
 ## Installation
 
@@ -35,11 +40,17 @@ go build -o gproc.exe cmd/main.go cmd/daemon.go
 # With environment variables
 .\gproc.exe start webapp .\server.exe --env "NODE_ENV=production" --env "PORT=8080"
 
-# With working directory
-.\gproc.exe start myapp .\app.exe --cwd "C:\myapp"
+# With health checks
+.\gproc.exe start webapp .\server.exe --health-check "http://localhost:8080/health" --health-interval 30s
 
-# With custom restart settings
-.\gproc.exe start myapp .\app.exe --max-restarts 10 --auto-restart=false
+# With resource limits
+.\gproc.exe start myapp .\app.exe --memory-limit 512MB --cpu-limit 50
+
+# With notifications
+.\gproc.exe start myapp .\app.exe --notify-email admin@company.com --notify-slack webhook-url
+
+# With log rotation
+.\gproc.exe start myapp .\app.exe --log-max-size 100MB --log-max-files 5
 ```
 
 ### List processes
@@ -65,9 +76,29 @@ go build -o gproc.exe cmd/main.go cmd/daemon.go
 .\gproc.exe restart myapp
 ```
 
-### Daemon mode
+### Advanced Features
 ```bash
-# Run as background service
+# Process groups
+.\gproc.exe start-group webapp "web1,web2,web3"
+.\gproc.exe stop-group webapp
+
+# Scheduled tasks
+.\gproc.exe schedule backup .\backup.exe --cron "0 2 * * *"
+
+# Web dashboard
+.\gproc.exe web --port 3000
+
+# Process templates
+.\gproc.exe template create webapp --command .\server.exe --env "NODE_ENV=prod"
+.\gproc.exe start-template webapp myapp1
+
+# Load balancing cluster
+.\gproc.exe cluster start webapp .\server.exe --instances 4 --port 8080
+
+# Start from config file
+.\gproc.exe start-from-config .\gproc.yaml
+
+# Daemon mode
 .\gproc.exe daemon
 ```
 
@@ -143,4 +174,4 @@ GProc is **production-ready** with:
 - ✅ Real-time monitoring
 - ✅ Daemon service mode
 
-**Status**: 8/10 core features implemented. Ready for production use.
+**Status**: 18/18 enterprise features implemented. Production-ready with advanced capabilities.

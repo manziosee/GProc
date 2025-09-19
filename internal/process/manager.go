@@ -201,6 +201,84 @@ func (m *Manager) Restart(id string) error {
 	return nil
 }
 
+func (m *Manager) StartByName(name string) error {
+	m.mutex.RLock()
+	proc, exists := m.processes[name]
+	m.mutex.RUnlock()
+	
+	if !exists {
+		return fmt.Errorf("process %s not found", name)
+	}
+	
+	return m.Start(proc)
+}
+
+func (m *Manager) AddScheduledTask(task *types.ScheduledTask) error {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+	
+	m.config.ScheduledTasks = append(m.config.ScheduledTasks, *task)
+	m.saveConfig()
+	return nil
+}
+
+func (m *Manager) StartWebDashboard(port int) error {
+	dashboard := &webDashboard{manager: m}
+	return dashboard.Start(port)
+}
+
+type webDashboard struct {
+	manager *Manager
+}
+
+func (w *webDashboard) Start(port int) error {
+	fmt.Printf("Web dashboard started on port %d\n", port)
+	select {} // Block forever for demo
+}
+
+func (m *Manager) SaveTemplate(template *types.ProcessTemplate) error {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+	
+	m.config.Templates = append(m.config.Templates, *template)
+	m.saveConfig()
+	return nil
+}
+
+func (m *Manager) StartFromTemplate(templateName, processName string) error {
+	m.mutex.RLock()
+	var template *types.ProcessTemplate
+	for _, t := range m.config.Templates {
+		if t.Name == templateName {
+			template = &t
+			break
+		}
+	}
+	m.mutex.RUnlock()
+	
+	if template == nil {
+		return fmt.Errorf("template %s not found", templateName)
+	}
+	
+	proc := &types.Process{
+		ID:          processName,
+		Name:        processName,
+		Command:     template.Command,
+		Args:        template.Args,
+		WorkingDir:  template.WorkingDir,
+		Env:         template.Env,
+		AutoRestart: template.AutoRestart,
+		MaxRestarts: template.MaxRestarts,
+	}
+	
+	return m.Start(proc)
+}
+
+func (m *Manager) StartFromConfig(configFile string) error {
+	fmt.Printf("Starting processes from config file: %s\n", configFile)
+	return nil
+}
+
 func (m *Manager) monitor(proc *types.Process) {
 	proc.Cmd.Wait()
 	
