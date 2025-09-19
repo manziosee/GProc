@@ -1,0 +1,22 @@
+# Binaries
+*.exe
+gproc
+gproc.exe
+
+# Logs
+logs/
+*.log
+
+# Configuration state
+gproc.json
+
+# Go build cache
+go.sum
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db

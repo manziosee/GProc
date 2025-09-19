@@ -1,0 +1,18 @@
+processes:
+  - name: webapp
+    command: ./myapp.exe
+    args: ["--port", "8080"]
+    working_dir: "/path/to/app"
+    env:
+      NODE_ENV: production
+      PORT: "8080"
+    auto_restart: true
+    max_restarts: 10
+  
+  - name: worker
+    command: ./worker.exe
+    args: ["--queue", "default"]
+    auto_restart: true
+    max_restarts: 5
+
+log_dir: "./logs"

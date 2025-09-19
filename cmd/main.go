@@ -1,11 +1,10 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
+	"strings"
 	"text/tabwriter"
 	"time"
 
@@ -34,6 +33,7 @@ func main() {
 		listCmd(),
 		logsCmd(),
 		restartCmd(),
+		daemonCmd(),
 	)
 
 	if err := rootCmd.Execute(); err != nil {
@@ -46,18 +46,28 @@ func startCmd() *cobra.Command {
 	var autoRestart bool
 	var maxRestarts int
 	var workingDir string
+	var envVars []string
 
 	cmd := &cobra.Command{
 		Use:   "start <name> <command> [args...]",
 		Short: "Start a new process",
 		Args:  cobra.MinimumNArgs(2),
 		Run: func(cmd *cobra.Command, args []string) {
+			// Parse environment variables
+			env := make(map[string]string)
+			for _, e := range envVars {
+				if parts := strings.SplitN(e, "=", 2); len(parts) == 2 {
+					env[parts[0]] = parts[1]
+				}
+			}
+			
 			proc := &types.Process{
 				ID:          args[0],
 				Name:        args[0],
 				Command:     args[1],
 				Args:        args[2:],
 				WorkingDir:  workingDir,
+				Env:         env,
 				AutoRestart: autoRestart,
 				MaxRestarts: maxRestarts,
 			}
@@ -73,6 +83,7 @@ func startCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&autoRestart, "auto-restart", true, "Auto restart on failure")
 	cmd.Flags().IntVar(&maxRestarts, "max-restarts", 5, "Maximum restart attempts")
 	cmd.Flags().StringVar(&workingDir, "cwd", "", "Working directory")
+	cmd.Flags().StringSliceVar(&envVars, "env", []string{}, "Environment variables (KEY=VALUE)")
 
 	return cmd
 }
@@ -145,13 +156,10 @@ func restartCmd() *cobra.Command {
 		Short: "Restart a process",
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			if err := manager.Stop(args[0]); err != nil {
-				fmt.Printf("Error stopping process: %v\n", err)
+			if err := manager.Restart(args[0]); err != nil {
+				fmt.Printf("Error restarting process: %v\n", err)
+				return
 			}
-			
-			time.Sleep(1 * time.Second)
-			
-			// Note: In a real implementation, you'd need to store process configs
 			fmt.Printf("Restarted process %s\n", args[0])
 		},
 	}
