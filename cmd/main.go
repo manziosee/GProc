@@ -28,12 +28,15 @@ func main() {
 	}
 
 	rootCmd.AddCommand(
+		// Core commands
 		startCmd(),
 		stopCmd(),
 		listCmd(),
 		logsCmd(),
 		restartCmd(),
 		daemonCmd(),
+		
+		// Basic advanced commands
 		startGroupCmd(),
 		stopGroupCmd(),
 		scheduleCmd(),
@@ -42,6 +45,41 @@ func main() {
 		startTemplateCmd(),
 		clusterCmd(),
 		startFromConfigCmd(),
+		
+		// Phase 1: Process Management Enhancements
+		reloadCmd(),
+		initCmd(),
+		topCmd(),
+		snapshotCmd(),
+		dependsCmd(),
+		blueGreenCmd(),
+		
+		// Phase 2: Monitoring & Observability
+		metricsCmd(),
+		alertsCmd(),
+		profileCmd(),
+		dashboardCmd(),
+		
+		// Phase 3: Distributed & Remote Management
+		clusterMgmtCmd(),
+		remoteCmd(),
+		agentCmd(),
+		discoveryCmd(),
+		
+		// Phase 4: Cloud & Container Integration
+		dockerCmd(),
+		k8sCmd(),
+		hybridCmd(),
+		
+		// Phase 5: Security & Compliance
+		rbacCmd(),
+		auditCmd(),
+		secretsCmd(),
+		tlsCmd(),
+		
+		// Plugin System
+		pluginCmd(),
+		hookCmd(),
 	)
 
 	if err := rootCmd.Execute(); err != nil {

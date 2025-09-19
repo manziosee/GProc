@@ -32,7 +32,59 @@ type Process struct {
 	LogRotation   *LogRotation      `json:"log_rotation"`
 	ResourceLimit *ResourceLimit    `json:"resource_limit"`
 	Notifications *Notifications    `json:"notifications"`
+	Dependencies  []string          `json:"dependencies"`
+	Priority      int               `json:"priority"`
+	BlueGreen     *BlueGreenConfig  `json:"blue_green"`
+	Metrics       *ProcessMetrics   `json:"metrics"`
 	Cmd           *exec.Cmd         `json:"-"`
+}
+
+type BlueGreenConfig struct {
+	Enabled     bool   `json:"enabled"`
+	ActiveSlot  string `json:"active_slot"`
+	BluePort    int    `json:"blue_port"`
+	GreenPort   int    `json:"green_port"`
+	HealthPath  string `json:"health_path"`
+}
+
+type ProcessMetrics struct {
+	CPUUsage    float64   `json:"cpu_usage"`
+	MemoryUsage int64     `json:"memory_usage"`
+	Uptime      time.Duration `json:"uptime"`
+	LastCheck   time.Time `json:"last_check"`
+	History     []MetricPoint `json:"history"`
+}
+
+type MetricPoint struct {
+	Timestamp time.Time `json:"timestamp"`
+	CPU       float64   `json:"cpu"`
+	Memory    int64     `json:"memory"`
+}
+
+type Snapshot struct {
+	ID        string    `json:"id"`
+	Name      string    `json:"name"`
+	Timestamp time.Time `json:"timestamp"`
+	Processes []Process `json:"processes"`
+	Config    Config    `json:"config"`
+}
+
+type Alert struct {
+	ID          string    `json:"id"`
+	ProcessID   string    `json:"process_id"`
+	Type        string    `json:"type"`
+	Message     string    `json:"message"`
+	Severity    string    `json:"severity"`
+	Timestamp   time.Time `json:"timestamp"`
+	Acknowledged bool     `json:"acknowledged"`
+}
+
+type Plugin struct {
+	Name        string            `json:"name"`
+	Path        string            `json:"path"`
+	Events      []string          `json:"events"`
+	Config      map[string]string `json:"config"`
+	Enabled     bool              `json:"enabled"`
 }
 
 type HealthCheck struct {
@@ -85,6 +137,44 @@ type Config struct {
 	Groups         []ProcessGroup    `json:"groups"`
 	Templates      []ProcessTemplate `json:"templates"`
 	ScheduledTasks []ScheduledTask   `json:"scheduled_tasks"`
+	Snapshots      []Snapshot        `json:"snapshots"`
+	Alerts         []Alert           `json:"alerts"`
+	Plugins        []Plugin          `json:"plugins"`
 	LogDir         string            `json:"log_dir"`
 	WebPort        int               `json:"web_port"`
+	Cluster        *ClusterConfig    `json:"cluster"`
+	Security       *SecurityConfig   `json:"security"`
+	Monitoring     *MonitoringConfig `json:"monitoring"`
+}
+
+type ClusterConfig struct {
+	Enabled    bool     `json:"enabled"`
+	Mode       string   `json:"mode"` // "master" or "agent"
+	MasterAddr string   `json:"master_addr"`
+	Agents     []string `json:"agents"`
+	TLSEnabled bool     `json:"tls_enabled"`
+}
+
+type SecurityConfig struct {
+	RBACEnabled   bool              `json:"rbac_enabled"`
+	Users         []User            `json:"users"`
+	AuditLog      bool              `json:"audit_log"`
+	TLSCert       string            `json:"tls_cert"`
+	TLSKey        string            `json:"tls_key"`
+	SecretsVault  string            `json:"secrets_vault"`
+}
+
+type MonitoringConfig struct {
+	MetricsEnabled   bool   `json:"metrics_enabled"`
+	MetricsDB        string `json:"metrics_db"`
+	RetentionDays    int    `json:"retention_days"`
+	AlertingEnabled  bool   `json:"alerting_enabled"`
+	ProfilingEnabled bool   `json:"profiling_enabled"`
+}
+
+type User struct {
+	Username string   `json:"username"`
+	Password string   `json:"password"`
+	Roles    []string `json:"roles"`
+	Enabled  bool     `json:"enabled"`
 }
