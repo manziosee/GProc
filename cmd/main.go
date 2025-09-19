@@ -34,6 +34,14 @@ func main() {
 		logsCmd(),
 		restartCmd(),
 		daemonCmd(),
+		startGroupCmd(),
+		stopGroupCmd(),
+		scheduleCmd(),
+		webCmd(),
+		templateCmd(),
+		startTemplateCmd(),
+		clusterCmd(),
+		startFromConfigCmd(),
 	)
 
 	if err := rootCmd.Execute(); err != nil {
@@ -47,6 +55,15 @@ func startCmd() *cobra.Command {
 	var maxRestarts int
 	var workingDir string
 	var envVars []string
+	var group string
+	var healthCheck string
+	var healthInterval string
+	var logMaxSize string
+	var logMaxFiles int
+	var memoryLimit string
+	var cpuLimit float64
+	var notifyEmail string
+	var notifySlack string
 
 	cmd := &cobra.Command{
 		Use:   "start <name> <command> [args...]",
@@ -61,15 +78,69 @@ func startCmd() *cobra.Command {
 				}
 			}
 			
+			// Parse health check
+			var hc *types.HealthCheck
+			if healthCheck != "" {
+				interval, _ := time.ParseDuration(healthInterval)
+				if interval == 0 {
+					interval = 30 * time.Second
+				}
+				hc = &types.HealthCheck{
+					URL:      healthCheck,
+					Interval: interval,
+					Timeout:  5 * time.Second,
+					Retries:  3,
+				}
+			}
+			
+			// Parse log rotation
+			var lr *types.LogRotation
+			if logMaxSize != "" {
+				lr = &types.LogRotation{
+					MaxSize:  logMaxSize,
+					MaxFiles: logMaxFiles,
+				}
+			}
+			
+			// Parse resource limits
+			var rl *types.ResourceLimit
+			if memoryLimit != "" || cpuLimit > 0 {
+				memMB := 0
+				if memoryLimit != "" {
+					// Simple parsing: "512MB" -> 512
+					if strings.HasSuffix(memoryLimit, "MB") {
+						fmt.Sscanf(memoryLimit, "%dMB", &memMB)
+					}
+				}
+				rl = &types.ResourceLimit{
+					MemoryMB: memMB,
+					CPULimit: cpuLimit,
+				}
+			}
+			
+			// Parse notifications
+			var notif *types.Notifications
+			if notifyEmail != "" || notifySlack != "" {
+				notif = &types.Notifications{
+					Email: notifyEmail,
+					Slack: notifySlack,
+				}
+			}
+			
 			proc := &types.Process{
-				ID:          args[0],
-				Name:        args[0],
-				Command:     args[1],
-				Args:        args[2:],
-				WorkingDir:  workingDir,
-				Env:         env,
-				AutoRestart: autoRestart,
-				MaxRestarts: maxRestarts,
+				ID:            args[0],
+				Name:          args[0],
+				Command:       args[1],
+				Args:          args[2:],
+				WorkingDir:    workingDir,
+				Env:           env,
+				Group:         group,
+				AutoRestart:   autoRestart,
+				MaxRestarts:   maxRestarts,
+				HealthCheck:   hc,
+				LogRotation:   lr,
+				ResourceLimit: rl,
+				Notifications: notif,
 			}
 
 			if err := manager.Start(proc); err != nil {
@@ -84,6 +155,15 @@ func startCmd() *cobra.Command {
 	cmd.Flags().IntVar(&maxRestarts, "max-restarts", 5, "Maximum restart attempts")
 	cmd.Flags().StringVar(&workingDir, "cwd", "", "Working directory")
 	cmd.Flags().StringSliceVar(&envVars, "env", []string{}, "Environment variables (KEY=VALUE)")
+	cmd.Flags().StringVar(&group, "group", "", "Process group name")
+	cmd.Flags().StringVar(&healthCheck, "health-check", "", "Health check URL")
+	cmd.Flags().StringVar(&healthInterval, "health-interval", "30s", "Health check interval")
+	cmd.Flags().StringVar(&logMaxSize, "log-max-size", "", "Maximum log file size (e.g., 100MB)")
+	cmd.Flags().IntVar(&logMaxFiles, "log-max-files", 5, "Maximum number of log files")
+	cmd.Flags().StringVar(&memoryLimit, "memory-limit", "", "Memory limit (e.g., 512MB)")
+	cmd.Flags().Float64Var(&cpuLimit, "cpu-limit", 0, "CPU limit percentage (e.g., 50.0)")
+	cmd.Flags().StringVar(&notifyEmail, "notify-email", "", "Email for notifications")
+	cmd.Flags().StringVar(&notifySlack, "notify-slack", "", "Slack webhook for notifications")
 
 	return cmd
 }
