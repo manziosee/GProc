@@ -1,0 +1,13 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#10b981;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#059669;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="16" fill="url(#gradient)"/>
+  <path d="M20 24h8v16h-8V24zm12 0h8v16h-8V24z" fill="white" opacity="0.9"/>
+  <path d="M16 44h32v4H16v-4z" fill="white" opacity="0.7"/>
+  <circle cx="44" cy="20" r="3" fill="white" opacity="0.8"/>
+  <text x="32" y="54" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="8" font-weight="bold">GP</text>
+</svg>

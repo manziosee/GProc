@@ -1,241 +1,268 @@
 package cluster
 
 import (
-	"encoding/json"
+	"context"
 	"fmt"
-	"net/http"
 	"sync"
 	"time"
+
+	"gproc/pkg/types"
 )
 
 type ClusterManager struct {
-	mode      string // "master" or "agent"
-	nodes     map[string]*ClusterNode
-	mutex     sync.RWMutex
-	masterURL string
-	agentPort int
+	config    *types.ClusterConfig
+	nodeID    string
+	nodes     map[string]*types.ClusterNode
+	isLeader  bool
+	discovery DiscoveryService
+	consensus ConsensusService
+	mu        sync.RWMutex
 }
 
-type ClusterNode struct {
-	ID       string    `json:"id"`
-	Address  string    `json:"address"`
-	Status   string    `json:"status"`
-	LastSeen time.Time `json:"last_seen"`
-	Metadata map[string]string `json:"metadata"`
-}
-
-type ClusterMessage struct {
-	Type    string      `json:"type"`
-	Payload interface{} `json:"payload"`
-	From    string      `json:"from"`
-	To      string      `json:"to"`
-}
-
-func NewClusterManager() *ClusterManager {
-	return &ClusterManager{
-		nodes: make(map[string]*ClusterNode),
-		mode:  "standalone",
-	}
-}
-
-func (cm *ClusterManager) InitMaster(port int) error {
-	cm.mode = "master"
-	cm.agentPort = port
-	
-	// Start master HTTP server
-	http.HandleFunc("/cluster/join", cm.handleJoin)
-	http.HandleFunc("/cluster/heartbeat", cm.handleHeartbeat)
-	http.HandleFunc("/cluster/command", cm.handleCommand)
-	http.HandleFunc("/cluster/nodes", cm.handleNodes)
-	
-	go func() {
-		fmt.Printf("Cluster master starting on port %d\n", port)
-		http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
-	}()
-	
-	// Start heartbeat monitor
-	go cm.monitorNodes()
-	
-	return nil
-}
-
-func (cm *ClusterManager) JoinCluster(masterAddr string) error {
-	cm.mode = "agent"
-	cm.masterURL = masterAddr
-	
-	// Register with master
-	joinReq := map[string]string{
-		"node_id": fmt.Sprintf("agent-%d", time.Now().Unix()),
-		"address": "localhost:9091", // Agent address
-		"status":  "joining",
+func NewClusterManager(config *types.ClusterConfig) *ClusterManager {
+	cm := &ClusterManager{
+		config: config,
+		nodeID: config.NodeID,
+		nodes:  make(map[string]*types.ClusterNode),
 	}
 	
-	_, _ = json.Marshal(joinReq)
-	resp, err := http.Post(fmt.Sprintf("http://%s/cluster/join", masterAddr), 
-		"application/json", nil)
-	if err != nil {
-		return err
+	// Initialize discovery service
+	if config.Discovery != nil {
+		cm.discovery = NewDiscoveryService(config.Discovery)
 	}
-	defer resp.Body.Close()
 	
-	// Start heartbeat
-	go cm.sendHeartbeat()
+	// Initialize consensus service
+	if config.Consensus != nil {
+		cm.consensus = NewConsensusService(config.Consensus)
+	}
 	
-	fmt.Printf("Joined cluster at %s\n", masterAddr)
-	return nil
+	return cm
 }
 
-func (cm *ClusterManager) handleJoin(w http.ResponseWriter, r *http.Request) {
-	var joinReq map[string]string
-	json.NewDecoder(r.Body).Decode(&joinReq)
+func (cm *ClusterManager) Start(ctx context.Context) error {
+	if !cm.config.Enabled {
+		return nil
+	}
 	
-	node := &ClusterNode{
-		ID:       joinReq["node_id"],
-		Address:  joinReq["address"],
+	// Register this node
+	node := &types.ClusterNode{
+		ID:       cm.nodeID,
+		Address:  "localhost:8080", // Would be configurable
+		Role:     "follower",
 		Status:   "active",
 		LastSeen: time.Now(),
 		Metadata: make(map[string]string),
 	}
 	
-	cm.mutex.Lock()
+	cm.mu.Lock()
+	cm.nodes[cm.nodeID] = node
+	cm.mu.Unlock()
+	
+	// Start discovery
+	if cm.discovery != nil {
+		go cm.discovery.Start(ctx, cm.onNodeDiscovered)
+	}
+	
+	// Start consensus
+	if cm.consensus != nil {
+		go cm.consensus.Start(ctx, cm.onLeaderElected)
+	}
+	
+	// Start health checking
+	go cm.healthCheckLoop(ctx)
+	
+	return nil
+}
+
+func (cm *ClusterManager) onNodeDiscovered(node *types.ClusterNode) {
+	cm.mu.Lock()
+	defer cm.mu.Unlock()
+	
 	cm.nodes[node.ID] = node
-	cm.mutex.Unlock()
-	
-	fmt.Printf("Node %s joined cluster\n", node.ID)
-	
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{"status": "joined"})
+	fmt.Printf("Node discovered: %s at %s\n", node.ID, node.Address)
 }
 
-func (cm *ClusterManager) handleHeartbeat(w http.ResponseWriter, r *http.Request) {
-	var heartbeat map[string]interface{}
-	json.NewDecoder(r.Body).Decode(&heartbeat)
+func (cm *ClusterManager) onLeaderElected(leaderID string) {
+	cm.mu.Lock()
+	defer cm.mu.Unlock()
 	
-	nodeID := heartbeat["node_id"].(string)
+	cm.isLeader = (leaderID == cm.nodeID)
 	
-	cm.mutex.Lock()
-	if node, exists := cm.nodes[nodeID]; exists {
-		node.LastSeen = time.Now()
-		node.Status = "active"
+	if node, exists := cm.nodes[leaderID]; exists {
+		node.Role = "leader"
 	}
-	cm.mutex.Unlock()
 	
-	w.WriteHeader(http.StatusOK)
+	fmt.Printf("Leader elected: %s (isLeader: %v)\n", leaderID, cm.isLeader)
 }
 
-func (cm *ClusterManager) handleCommand(w http.ResponseWriter, r *http.Request) {
-	var cmd ClusterMessage
-	json.NewDecoder(r.Body).Decode(&cmd)
-	
-	// Execute command on local node or forward to target
-	result := cm.executeCommand(cmd.Type, cmd.Payload)
-	
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"result": result,
-		"status": "success",
-	})
-}
-
-func (cm *ClusterManager) handleNodes(w http.ResponseWriter, r *http.Request) {
-	cm.mutex.RLock()
-	nodes := make([]*ClusterNode, 0, len(cm.nodes))
-	for _, node := range cm.nodes {
-		nodes = append(nodes, node)
-	}
-	cm.mutex.RUnlock()
-	
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(nodes)
-}
-
-func (cm *ClusterManager) sendHeartbeat() {
+func (cm *ClusterManager) healthCheckLoop(ctx context.Context) {
 	ticker := time.NewTicker(30 * time.Second)
 	defer ticker.Stop()
 	
-	for range ticker.C {
-		if cm.mode != "agent" || cm.masterURL == "" {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			cm.performHealthCheck()
+		}
+	}
+}
+
+func (cm *ClusterManager) performHealthCheck() {
+	cm.mu.Lock()
+	defer cm.mu.Unlock()
+	
+	now := time.Now()
+	for id, node := range cm.nodes {
+		if id == cm.nodeID {
+			node.LastSeen = now
 			continue
 		}
 		
-		heartbeat := map[string]interface{}{
-			"node_id":   "agent-1", // Should be dynamic
-			"timestamp": time.Now(),
-			"status":    "active",
+		// Check if node is stale (no heartbeat for 2 minutes)
+		if now.Sub(node.LastSeen) > 2*time.Minute {
+			node.Status = "failed"
 		}
-		
-		_, _ = json.Marshal(heartbeat)
-		http.Post(fmt.Sprintf("http://%s/cluster/heartbeat", cm.masterURL),
-			"application/json", nil)
 	}
 }
 
-func (cm *ClusterManager) monitorNodes() {
-	ticker := time.NewTicker(60 * time.Second)
-	defer ticker.Stop()
+func (cm *ClusterManager) GetNodes() []*types.ClusterNode {
+	cm.mu.RLock()
+	defer cm.mu.RUnlock()
 	
-	for range ticker.C {
-		cm.mutex.Lock()
-		for nodeID, node := range cm.nodes {
-			if time.Since(node.LastSeen) > 2*time.Minute {
-				node.Status = "offline"
-				fmt.Printf("Node %s marked as offline\n", nodeID)
-			}
-		}
-		cm.mutex.Unlock()
-	}
-}
-
-func (cm *ClusterManager) executeCommand(cmdType string, payload interface{}) interface{} {
-	switch cmdType {
-	case "list_processes":
-		return map[string]string{"result": "process list"}
-	case "start_process":
-		return map[string]string{"result": "process started"}
-	case "stop_process":
-		return map[string]string{"result": "process stopped"}
-	default:
-		return map[string]string{"error": "unknown command"}
-	}
-}
-
-func (cm *ClusterManager) GetNodes() []*ClusterNode {
-	cm.mutex.RLock()
-	defer cm.mutex.RUnlock()
-	
-	nodes := make([]*ClusterNode, 0, len(cm.nodes))
+	nodes := make([]*types.ClusterNode, 0, len(cm.nodes))
 	for _, node := range cm.nodes {
 		nodes = append(nodes, node)
 	}
 	return nodes
 }
 
-func (cm *ClusterManager) ExecuteRemoteCommand(nodeID, command string, args []string) error {
-	cm.mutex.RLock()
-	node, exists := cm.nodes[nodeID]
-	cm.mutex.RUnlock()
+func (cm *ClusterManager) IsLeader() bool {
+	cm.mu.RLock()
+	defer cm.mu.RUnlock()
+	return cm.isLeader
+}
+
+func (cm *ClusterManager) GetLeader() *types.ClusterNode {
+	cm.mu.RLock()
+	defer cm.mu.RUnlock()
 	
-	if !exists {
-		return fmt.Errorf("node %s not found", nodeID)
+	for _, node := range cm.nodes {
+		if node.Role == "leader" {
+			return node
+		}
 	}
-	
-	cmd := ClusterMessage{
-		Type: command,
-		Payload: map[string]interface{}{
-			"args": args,
-		},
-		From: "master",
-		To:   nodeID,
-	}
-	
-	_, _ = json.Marshal(cmd)
-	resp, err := http.Post(fmt.Sprintf("http://%s/cluster/command", node.Address),
-		"application/json", nil)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-	
-	fmt.Printf("Executed command %s on node %s\n", command, nodeID)
 	return nil
+}
+
+// Discovery Service Interface
+type DiscoveryService interface {
+	Start(ctx context.Context, onNodeDiscovered func(*types.ClusterNode)) error
+	Register(node *types.ClusterNode) error
+	Deregister(nodeID string) error
+}
+
+// Consensus Service Interface
+type ConsensusService interface {
+	Start(ctx context.Context, onLeaderElected func(string)) error
+	ProposeLeader(nodeID string) error
+	GetCurrentLeader() string
+}
+
+// Simple in-memory discovery service
+type InMemoryDiscovery struct {
+	config *types.DiscoveryConfig
+	nodes  map[string]*types.ClusterNode
+	mu     sync.RWMutex
+}
+
+func NewDiscoveryService(config *types.DiscoveryConfig) DiscoveryService {
+	return &InMemoryDiscovery{
+		config: config,
+		nodes:  make(map[string]*types.ClusterNode),
+	}
+}
+
+func (d *InMemoryDiscovery) Start(ctx context.Context, onNodeDiscovered func(*types.ClusterNode)) error {
+	// Simulate node discovery
+	go func() {
+		ticker := time.NewTicker(10 * time.Second)
+		defer ticker.Stop()
+		
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				// Simulate discovering nodes
+				d.mu.RLock()
+				for _, node := range d.nodes {
+					onNodeDiscovered(node)
+				}
+				d.mu.RUnlock()
+			}
+		}
+	}()
+	
+	return nil
+}
+
+func (d *InMemoryDiscovery) Register(node *types.ClusterNode) error {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	
+	d.nodes[node.ID] = node
+	return nil
+}
+
+func (d *InMemoryDiscovery) Deregister(nodeID string) error {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	
+	delete(d.nodes, nodeID)
+	return nil
+}
+
+// Simple consensus service
+type SimpleConsensus struct {
+	config   *types.ConsensusConfig
+	leaderID string
+	mu       sync.RWMutex
+}
+
+func NewConsensusService(config *types.ConsensusConfig) ConsensusService {
+	return &SimpleConsensus{
+		config: config,
+	}
+}
+
+func (c *SimpleConsensus) Start(ctx context.Context, onLeaderElected func(string)) error {
+	// Simple leader election - first node becomes leader
+	go func() {
+		time.Sleep(5 * time.Second) // Wait for nodes to register
+		
+		c.mu.Lock()
+		if c.leaderID == "" {
+			c.leaderID = "node-1" // Simple election
+			onLeaderElected(c.leaderID)
+		}
+		c.mu.Unlock()
+	}()
+	
+	return nil
+}
+
+func (c *SimpleConsensus) ProposeLeader(nodeID string) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	
+	c.leaderID = nodeID
+	return nil
+}
+
+func (c *SimpleConsensus) GetCurrentLeader() string {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.leaderID
 }
