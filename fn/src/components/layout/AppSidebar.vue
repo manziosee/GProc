@@ -41,8 +41,10 @@ const menuItems = [
   { key: 'processes', label: 'Processes', icon: '⚡' },
   { key: 'logs', label: 'Logs', icon: '📋' },
   { key: 'monitoring', label: 'Monitoring', icon: '📈' },
+  { key: 'loadbalancer', label: 'Load Balancer', icon: '⚖️' },
   { key: 'config', label: 'Config', icon: '🔧' },
   { key: 'scheduler', label: 'Scheduler', icon: '⏰' },
+  { key: 'daemon', label: 'Daemon Status', icon: '🔧' },
   { key: 'cli', label: 'CLI Reference', icon: '💻' },
   { key: 'users', label: 'Users', icon: '👥' },
   { key: 'settings', label: 'Settings', icon: '⚙️' }

@@ -23,8 +23,10 @@
                   <ProcessManagement v-else-if="currentPage === 'processes'" />
                   <LogsViewer v-else-if="currentPage === 'logs'" />
                   <HealthMonitoring v-else-if="currentPage === 'monitoring'" />
+                  <LoadBalancer v-else-if="currentPage === 'loadbalancer'" />
                   <ConfigManager v-else-if="currentPage === 'config'" />
                   <ScheduledTasks v-else-if="currentPage === 'scheduler'" />
+                  <DaemonStatus v-else-if="currentPage === 'daemon'" />
                   <CLI v-else-if="currentPage === 'cli'" />
                   <UserManagement v-else-if="currentPage === 'users'" />
                   <Settings v-else-if="currentPage === 'settings'" />
@@ -48,8 +50,10 @@ import Dashboard from './pages/Dashboard.vue'
 import ProcessManagement from './pages/ProcessManagement.vue'
 import LogsViewer from './pages/LogsViewer.vue'
 import HealthMonitoring from './pages/HealthMonitoring.vue'
+import LoadBalancer from './pages/LoadBalancer.vue'
 import ConfigManager from './pages/ConfigManager.vue'
 import ScheduledTasks from './pages/ScheduledTasks.vue'
+import DaemonStatus from './pages/DaemonStatus.vue'
 import CLI from './pages/CLI.vue'
 import UserManagement from './pages/UserManagement.vue'
 import Settings from './pages/Settings.vue'
