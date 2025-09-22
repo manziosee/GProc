@@ -207,7 +207,7 @@ func (mm *MetricsManager) UpdateProcessMetrics(processName string, cpu float64, 
 type AlertManager struct {
 	config    *types.AlertingConfig
 	providers map[string]AlertProvider
-	rules     []*types.AlertRule
+	rules     []types.AlertRule
 	mu        sync.RWMutex
 }
 
@@ -258,18 +258,18 @@ func (am *AlertManager) checkRules() {
 	
 	for _, rule := range am.rules {
 		// Simulate rule evaluation
-		if am.shouldTriggerAlert(rule) {
+		if shouldTriggerAlert(rule) {
 			am.sendAlert(rule)
 		}
 	}
 }
 
-func (am *AlertManager) shouldTriggerAlert(rule *types.AlertRule) bool {
+func shouldTriggerAlert(rule types.AlertRule) bool {
 	// Simple simulation - trigger alert randomly
 	return time.Now().Unix()%60 < 5 // 5 seconds out of every minute
 }
 
-func (am *AlertManager) sendAlert(rule *types.AlertRule) {
+func (am *AlertManager) sendAlert(rule types.AlertRule) {
 	alert := Alert{
 		Name:      rule.Name,
 		Severity:  rule.Severity,
