@@ -8,62 +8,13 @@ import (
 	"gproc/internal/deployment"
 	"gproc/internal/probes"
 	"gproc/internal/scheduler"
-	"gproc/internal/templates"
 	"gproc/internal/tui"
 	"gproc/pkg/types"
 )
 
 // Enhanced CLI commands for all the new features
 
-func initCmd() *cobra.Command {
-	var language string
-	var appPath string
-	
-	cmd := &cobra.Command{
-		Use:   "init [language] [app-path]",
-		Short: "Initialize GProc configuration for different languages",
-		Long: `Generate language-specific GProc configuration templates.
-Supported languages: node, python, java, go, rust, php`,
-		Args: cobra.RangeArgs(0, 2),
-		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) >= 1 {
-				language = args[0]
-			}
-			if len(args) >= 2 {
-				appPath = args[1]
-			}
-			
-			// Auto-detect if not specified
-			if language == "" && appPath != "" {
-				detectedLang, _ := templates.DetectLanguage(appPath)
-				language = detectedLang
-			}
-			
-			if language == "" {
-				fmt.Println("Available templates:")
-				for lang, template := range templates.LanguageTemplates {
-					fmt.Printf("  %s - %s\n", lang, template.Name)
-				}
-				return
-			}
-			
-			if appPath == "" {
-				appPath = fmt.Sprintf("app.%s", getDefaultExtension(language))
-			}
-			
-			err := templates.InitProject(language, appPath)
-			if err != nil {
-				fmt.Printf("Error initializing project: %v\n", err)
-				return
-			}
-			
-			fmt.Printf("✅ Generated gproc.yaml for %s application\n", language)
-			fmt.Printf("📝 Edit the configuration and run: gproc start-config\n")
-		},
-	}
-	
-	return cmd
-}
+// initCmd implemented in phase1.go
 
 func monitCmd() *cobra.Command {
 	return &cobra.Command{

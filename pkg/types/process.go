@@ -173,6 +173,13 @@ type SSOConfig struct {
 	EntityID   string `json:"entity_id"`
 }
 
+type MFAConfig struct {
+	Enabled     bool   `json:"enabled"`
+	Issuer      string `json:"issuer"`
+	WindowSize  int    `json:"window_size"`
+	BackupCodes int    `json:"backup_codes"`
+}
+
 type TLSConfig struct {
 	Enabled  bool   `json:"enabled"`
 	CertFile string `json:"cert_file"`
@@ -558,4 +565,19 @@ type NotificationRule struct {
 	Channels  []string `json:"channels"`
 	Enabled   bool     `json:"enabled"`
 	Cooldown  time.Duration `json:"cooldown"`
+}
+
+type ExtendedProbeConfig struct {
+	Enabled   bool     `json:"enabled"`
+	Languages []string `json:"languages"`
+	Interval  time.Duration `json:"interval"`
+}
+
+type ComposeConfig struct {
+	Enabled     bool              `json:"enabled"`
+	File        string            `json:"file"`
+	DefaultPath string            `json:"default_path"`
+	Project     string            `json:"project"`
+	Services    []string          `json:"services"`
+	Env         map[string]string `json:"env"`
 }

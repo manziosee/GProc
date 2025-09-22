@@ -49,35 +49,7 @@ func stopGroupCmd() *cobra.Command {
 	}
 }
 
-func scheduleCmd() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "schedule <name> <command> --cron <expression>",
-		Short: "Schedule a task with cron expression",
-		Args:  cobra.MinimumNArgs(2),
-		Run: func(cmd *cobra.Command, args []string) {
-			cronExpr, _ := cmd.Flags().GetString("cron")
-			if cronExpr == "" {
-				fmt.Println("Error: --cron flag is required")
-				return
-			}
-			
-			task := &types.ScheduledTask{
-				Name:    args[0],
-				Command: args[1],
-				Args:    args[2:],
-				Cron:    cronExpr,
-			}
-			
-			if err := manager.AddScheduledTask(task); err != nil {
-				fmt.Printf("Error scheduling task: %v\n", err)
-				return
-			}
-			fmt.Printf("Scheduled task %s\n", args[0])
-		},
-	}
-	cmd.Flags().String("cron", "", "Cron expression (e.g., '0 2 * * *')")
-	return cmd
-}
+// scheduleCmd implemented in enhanced.go
 
 func webCmd() *cobra.Command {
 	var port int
