@@ -35,6 +35,16 @@ func main() {
 		logsCmd(),
 		restartCmd(),
 		daemonCmd(),
+		
+		// Enhanced commands
+		initCmd(),
+		monitCmd(),
+		deployCmd(),
+		probesCmd(),
+		scheduleCmd(),
+		runOnceCmd(),
+		saveCmd(),
+		resurrectCmd(),
 	)
 
 	if err := rootCmd.Execute(); err != nil {
