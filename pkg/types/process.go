@@ -130,6 +130,7 @@ type User struct {
 	Roles    []string  `json:"roles"`
 	Created  time.Time `json:"created"`
 	LastSeen time.Time `json:"last_seen"`
+	Enabled  bool      `json:"enabled,omitempty"`
 }
 
 type AuthConfig struct {
@@ -344,9 +345,10 @@ type PluginConfig struct {
 }
 
 type Plugin struct {
-	Name    string `json:"name"`
-	Path    string `json:"path"`
-	Enabled bool   `json:"enabled"`
+	Name    string   `json:"name"`
+	Path    string   `json:"path"`
+	Enabled bool     `json:"enabled"`
+	Events  []string `json:"events,omitempty"`
 }
 
 // Enterprise Ops Types
@@ -424,4 +426,45 @@ type NamespaceQuota struct {
 	MaxProcesses int     `json:"max_processes"`
 	MaxCPU       float64 `json:"max_cpu"`
 	MaxMemory    int64   `json:"max_memory"`
+}
+
+// Missing types for compilation
+type Snapshot struct {
+	ID        string    `json:"id"`
+	Name      string    `json:"name"`
+	Timestamp time.Time `json:"timestamp"`
+	Processes []Process `json:"processes"`
+	Config    *Config   `json:"config"`
+}
+
+type BlueGreenConfig struct {
+	Enabled   bool   `json:"enabled"`
+	BluePort  int    `json:"blue_port"`
+	GreenPort int    `json:"green_port"`
+	Active    string `json:"active"` // blue or green
+}
+
+type Alert struct {
+	ID           string    `json:"id"`
+	Name         string    `json:"name"`
+	Message      string    `json:"message"`
+	Severity     string    `json:"severity"`
+	Type         string    `json:"type"`
+	Timestamp    time.Time `json:"timestamp"`
+	ProcessID    string    `json:"process_id"`
+	Resolved     bool      `json:"resolved"`
+	Acknowledged bool      `json:"acknowledged"`
+}
+
+type ProcessMetrics struct {
+	CPUUsage    float64       `json:"cpu_usage"`
+	MemoryUsage int64         `json:"memory_usage"`
+	Uptime      time.Duration `json:"uptime"`
+	Restarts    int           `json:"restarts"`
+}
+
+type MetricPoint struct {
+	Timestamp time.Time `json:"timestamp"`
+	CPU       float64   `json:"cpu"`
+	Memory    float64   `json:"memory"`
 }

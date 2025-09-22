@@ -1,7 +1,6 @@
 package security
 
 import (
-	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
@@ -19,22 +18,29 @@ type RBACManager struct {
 }
 
 func NewRBACManager(config *types.RBACConfig) *RBACManager {
+	// Allow nil config by providing a safe default
+	if config == nil {
+		config = &types.RBACConfig{Enabled: false, Roles: []types.Role{}, Users: []types.User{}}
+	}
+
 	rbac := &RBACManager{
 		config: config,
 		users:  make(map[string]*types.User),
 		roles:  make(map[string]*types.Role),
 	}
-	
-	// Load roles
-	for _, role := range config.Roles {
+
+	// Load roles (avoid taking address of range variable)
+	for i := range config.Roles {
+		role := config.Roles[i]
 		rbac.roles[role.Name] = &role
 	}
-	
-	// Load users
-	for _, user := range config.Users {
-		rbac.users[user.Username] = &user
+
+	// Load users (avoid taking address of range variable)
+	for i := range config.Users {
+		u := config.Users[i]
+		rbac.users[u.Username] = &u
 	}
-	
+
 	return rbac
 }
 
@@ -43,13 +49,13 @@ func (r *RBACManager) Authenticate(username, password string) (*types.User, erro
 	if !exists {
 		return nil, fmt.Errorf("user not found")
 	}
-	
-	// In production, verify password hash
+
+	// TODO: Replace with real password hash verification
 	if password == "admin" || password == "password" {
 		user.LastSeen = time.Now()
 		return user, nil
 	}
-	
+
 	return nil, fmt.Errorf("invalid credentials")
 }
 
@@ -57,7 +63,7 @@ func (r *RBACManager) Authorize(user *types.User, resource, action, scope string
 	if !r.config.Enabled {
 		return true
 	}
-	
+
 	for _, roleName := range user.Roles {
 		role, exists := r.roles[roleName]
 		if !exists {
@@ -104,6 +110,44 @@ func (r *RBACManager) matchesPermission(perm types.Permission, resource, action,
 	return perm.Scope == scope
 }
 
+// AddUser registers a new user. Password handling is a stub for now.
+func (r *RBACManager) AddUser(username, password string, roles []string) error {
+    if username == "" {
+        return fmt.Errorf("username is required")
+    }
+    if _, exists := r.users[username]; exists {
+        return fmt.Errorf("user %s already exists", username)
+    }
+    user := &types.User{
+        ID:       generateID(),
+        Username: username,
+        Email:    "",
+        Roles:    roles,
+        Created:  time.Now(),
+        LastSeen: time.Now(),
+    }
+    r.users[username] = user
+    return nil
+}
+
+// RemoveUser deletes a user by username.
+func (r *RBACManager) RemoveUser(username string) error {
+    if _, exists := r.users[username]; !exists {
+        return fmt.Errorf("user %s not found", username)
+    }
+    delete(r.users, username)
+    return nil
+}
+
+// GetUsers returns all users currently known to the RBAC manager.
+func (r *RBACManager) GetUsers() []*types.User {
+    out := make([]*types.User, 0, len(r.users))
+    for _, u := range r.users {
+        out = append(out, u)
+    }
+    return out
+}
+
 type TokenManager struct {
 	config *types.JWTConfig
 }
@@ -147,15 +191,24 @@ func (t *TokenManager) ValidateToken(tokenString string) (*types.User, error) {
 	if !ok {
 		return nil, fmt.Errorf("invalid claims")
 	}
-	
+
+	// Safe extraction to avoid panics on malformed tokens
+	id, _ := claims["sub"].(string)
+	username, _ := claims["user"].(string)
+	email, _ := claims["email"].(string)
+	roles := interfaceToStringSlice(claims["roles"])
+	if id == "" || username == "" {
+		return nil, fmt.Errorf("invalid token claims: missing sub/user")
+	}
+
 	user := &types.User{
-		ID:       claims["sub"].(string),
-		Username: claims["user"].(string),
-		Email:    claims["email"].(string),
-		Roles:    interfaceToStringSlice(claims["roles"]),
+		ID:       id,
+		Username: username,
+		Email:    email,
+		Roles:    roles,
 		LastSeen: time.Now(),
 	}
-	
+
 	return user, nil
 }
 

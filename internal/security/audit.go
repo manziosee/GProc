@@ -3,7 +3,6 @@ package security
 import (
 	"encoding/json"
 	"fmt"
-	"log/syslog"
 	"os"
 	"time"
 
@@ -13,7 +12,6 @@ import (
 type AuditLogger struct {
 	config    *types.AuditConfig
 	fileLog   *os.File
-	syslogger *syslog.Writer
 }
 
 type AuditEvent struct {
@@ -45,14 +43,7 @@ func NewAuditLogger(config *types.AuditConfig) (*AuditLogger, error) {
 		al.fileLog = file
 	}
 
-	// Initialize syslog if format is syslog
-	if config.Format == "syslog" {
-		syslogger, err := syslog.New(syslog.LOG_INFO|syslog.LOG_AUTH, "gproc-audit")
-		if err != nil {
-			return nil, fmt.Errorf("failed to connect to syslog: %v", err)
-		}
-		al.syslogger = syslogger
-	}
+	// Note: syslog is not supported cross-platform in stdlib; we'll simulate syslog format to file/stdout
 
 	return al, nil
 }
@@ -90,14 +81,14 @@ func (al *AuditLogger) logJSON(event AuditEvent) error {
 }
 
 func (al *AuditLogger) logSyslog(event AuditEvent) error {
-	if al.syslogger == nil {
-		return fmt.Errorf("syslog not configured")
-	}
-
 	message := fmt.Sprintf("user=%s action=%s resource=%s target=%s result=%s",
 		event.Username, event.Action, event.Resource, event.Target, event.Result)
-
-	return al.syslogger.Info(message)
+	if al.fileLog != nil {
+		_, err := al.fileLog.WriteString(message + "\n")
+		return err
+	}
+	fmt.Println(message)
+	return nil
 }
 
 func (al *AuditLogger) logPlainText(event AuditEvent) error {
@@ -174,9 +165,6 @@ func (al *AuditLogger) LogClusterAction(user *types.User, action, nodeID, result
 func (al *AuditLogger) Close() error {
 	if al.fileLog != nil {
 		return al.fileLog.Close()
-	}
-	if al.syslogger != nil {
-		return al.syslogger.Close()
 	}
 	return nil
 }

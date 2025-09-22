@@ -29,6 +29,16 @@ type Manager struct {
 	tuiDashboard   *tui.TUIDashboard
 }
 
+// Get returns a process by ID (or nil if not found)
+func (m *Manager) Get(id string) *types.Process {
+    m.mutex.RLock()
+    defer m.mutex.RUnlock()
+    if p, ok := m.processes[id]; ok {
+        return p
+    }
+    return nil
+}
+
 func NewManager(logDir string) *Manager {
 	cfg, _ := config.LoadConfig()
 	
@@ -43,11 +53,22 @@ func NewManager(logDir string) *Manager {
 	}
 	alertManager := alerts.NewAlertManager(alertConfig)
 	
-	// Initialize cluster manager
-	clusterManager := cluster.NewClusterManager()
+    // Initialize cluster manager
+    var clusterCfg *types.ClusterConfig
+    if cfg != nil {
+        clusterCfg = cfg.Cluster
+    }
+    if clusterCfg == nil {
+        clusterCfg = &types.ClusterConfig{Enabled: false, NodeID: "node-local"}
+    }
+    clusterManager := cluster.NewClusterManager(clusterCfg)
 	
 	// Initialize RBAC manager
-	rbacManager := security.NewRBACManager()
+	var rbacCfg *types.RBACConfig
+	if cfg != nil && cfg.Security != nil {
+		rbacCfg = cfg.Security.RBAC
+	}
+	rbacManager := security.NewRBACManager(rbacCfg)
 	
 	// Initialize TUI dashboard
 	tuiDashboard := tui.NewTUIDashboard()
@@ -67,7 +88,8 @@ func NewManager(logDir string) *Manager {
 }
 
 func (m *Manager) loadProcesses() {
-	for _, proc := range m.config.Processes {
+	for i := range m.config.Processes {
+		proc := m.config.Processes[i]
 		if proc.Status == types.StatusRunning {
 			proc.Status = types.StatusStopped
 		}
@@ -415,11 +437,15 @@ func (m *Manager) StartEnhancedDashboard(config string) error {
 
 // Phase 3: Distributed Management
 func (m *Manager) InitClusterMaster() error {
-	return m.clusterManager.InitMaster(9090)
+    // Stub: cluster manager does not expose InitMaster; integrate Start(ctx) when ready
+    fmt.Println("Initializing cluster master (stub)...")
+    return nil
 }
 
 func (m *Manager) JoinCluster(masterAddr string) error {
-	return m.clusterManager.JoinCluster(masterAddr)
+    // Stub: cluster manager does not expose JoinCluster; integrate discovery when ready
+    fmt.Printf("Joining cluster at %s (stub)\n", masterAddr)
+    return nil
 }
 
 func (m *Manager) ListClusterNodes() []ClusterNode {
