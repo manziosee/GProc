@@ -73,11 +73,18 @@ type ProcessTemplate struct {
 }
 
 type ScheduledTask struct {
-	Name     string `json:"name"`
-	Command  string `json:"command"`
-	Args     []string `json:"args"`
-	Cron     string `json:"cron"`
-	NextRun  time.Time `json:"next_run"`
+	Name        string            `json:"name"`
+	Command     string            `json:"command"`
+	Args        []string          `json:"args"`
+	Cron        string            `json:"cron"`
+	NextRun     time.Time         `json:"next_run"`
+	LastRun     time.Time         `json:"last_run,omitempty"`
+	Enabled     bool              `json:"enabled"`
+	Timeout     time.Duration     `json:"timeout,omitempty"`
+	Retries     int               `json:"retries,omitempty"`
+	Env         map[string]string `json:"env,omitempty"`
+	WorkingDir  string            `json:"working_dir,omitempty"`
+	Description string            `json:"description,omitempty"`
 }
 
 type Config struct {
@@ -467,4 +474,88 @@ type MetricPoint struct {
 	Timestamp time.Time `json:"timestamp"`
 	CPU       float64   `json:"cpu"`
 	Memory    float64   `json:"memory"`
+}
+
+// Language-specific probe results
+type ProbeResult struct {
+	Name      string      `json:"name"`
+	Value     interface{} `json:"value"`
+	Unit      string      `json:"unit"`
+	Timestamp time.Time   `json:"timestamp"`
+	Healthy   bool        `json:"healthy"`
+}
+
+// Deployment types
+type DeploymentStrategy string
+
+const (
+	BlueGreenStrategy DeploymentStrategy = "blue-green"
+	RollingStrategy   DeploymentStrategy = "rolling"
+	CanaryStrategy    DeploymentStrategy = "canary"
+)
+
+type DeploymentConfig struct {
+	ProcessName    string             `json:"process_name"`
+	Strategy       DeploymentStrategy `json:"strategy"`
+	NewVersion     string             `json:"new_version"`
+	Command        string             `json:"command"`
+	Args           []string           `json:"args"`
+	HealthCheck    *HealthCheck       `json:"health_check"`
+	RollbackOnFail bool               `json:"rollback_on_fail"`
+	Timeout        time.Duration      `json:"timeout"`
+}
+
+type DeploymentStatus struct {
+	Strategy    string    `json:"strategy"`
+	Status      string    `json:"status"` // pending, in-progress, completed, failed
+	Progress    int       `json:"progress"` // 0-100
+	StartTime   time.Time `json:"start_time"`
+	CompletedAt time.Time `json:"completed_at"`
+	Error       string    `json:"error,omitempty"`
+}
+
+// Language template types
+type LanguageTemplate struct {
+	Name        string            `json:"name"`
+	Extensions  []string          `json:"extensions"`
+	Command     string            `json:"command"`
+	Args        []string          `json:"args"`
+	HealthCheck string            `json:"health_check"`
+	EnvVars     map[string]string `json:"env_vars"`
+	Probes      []string          `json:"probes"`
+}
+
+// Enhanced Plugin type (replacing the basic one)
+type PluginExtended struct {
+	Name        string            `json:"name"`
+	Version     string            `json:"version"`
+	Path        string            `json:"path"`
+	Enabled     bool              `json:"enabled"`
+	Events      []string          `json:"events,omitempty"`
+	Config      map[string]string `json:"config,omitempty"`
+	Description string            `json:"description,omitempty"`
+}
+
+type PluginEvent struct {
+	Type      string                 `json:"type"`
+	ProcessID string                 `json:"process_id"`
+	Timestamp time.Time              `json:"timestamp"`
+	Data      map[string]interface{} `json:"data"`
+}
+
+// Notification types
+type NotificationChannel struct {
+	Name     string            `json:"name"`
+	Type     string            `json:"type"` // email, slack, teams, discord, webhook
+	Enabled  bool              `json:"enabled"`
+	Config   map[string]string `json:"config"`
+	Filters  []string          `json:"filters,omitempty"`
+}
+
+type NotificationRule struct {
+	Name      string   `json:"name"`
+	Condition string   `json:"condition"`
+	Channels  []string `json:"channels"`
+	Enabled   bool     `json:"enabled"`
+	Cooldown  time.Duration `json:"cooldown"`
 }
