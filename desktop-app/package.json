@@ -1,0 +1,45 @@
+{
+  "name": "gproc-desktop",
+  "version": "1.0.0",
+  "description": "GProc Desktop - Local Process Manager",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder",
+    "dev": "electron . --dev",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder"
+  },
+  "build": {
+    "appId": "io.gproc.desktop",
+    "productName": "GProc Desktop",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*",
+      "assets/**/*",
+      "node_modules/**/*"
+    ],
+    "mac": {
+      "category": "public.app-category.developer-tools"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
+  },
+  "dependencies": {
+    "electron": "^22.0.0",
+    "axios": "^1.0.0",
+    "ws": "^8.0.0",
+    "node-pty": "^0.10.1"
+  },
+  "devDependencies": {
+    "electron-builder": "^23.0.0"
+  },
+  "author": "GProc Team",
+  "license": "MIT"
+}

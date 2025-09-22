@@ -450,22 +450,19 @@ func (rs *RESTServer) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	ticker := time.NewTicker(5 * time.Second)
 	defer ticker.Stop()
 	
-	for {
-		select {
-		case <-ticker.C:
-			update := map[string]interface{}{
-				"type":      "process_update",
-				"timestamp": time.Now(),
-				"data": map[string]interface{}{
-					"processes_running": 5,
-					"cpu_usage":        34.5,
-					"memory_usage":     67.2,
-				},
-			}
-			
-			if err := conn.WriteJSON(update); err != nil {
-				return
-			}
+	for range ticker.C {
+		update := map[string]interface{}{
+			"type":      "process_update",
+			"timestamp": time.Now(),
+			"data": map[string]interface{}{
+				"processes_running": 5,
+				"cpu_usage":        34.5,
+				"memory_usage":     67.2,
+			},
+		}
+		
+		if err := conn.WriteJSON(update); err != nil {
+			return
 		}
 	}
 }

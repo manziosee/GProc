@@ -135,11 +135,10 @@ func blueGreenCmd() *cobra.Command {
 			switch action {
 			case "setup":
 				config := &types.BlueGreenConfig{
-					Enabled:    true,
-					ActiveSlot: "blue",
-					BluePort:   bluePort,
-					GreenPort:  greenPort,
-					HealthPath: healthPath,
+					Enabled:   true,
+					Active:    "blue",
+					BluePort:  bluePort,
+					GreenPort: greenPort,
 				}
 				if err := manager.SetupBlueGreen(processName, config); err != nil {
 					fmt.Printf("Error setting up blue/green: %v\n", err)

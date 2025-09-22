@@ -20,12 +20,14 @@ type ProbeResult struct {
 type LanguageProbe interface {
 	Probe(pid int) (*ProbeResult, error)
 	GetName() string
+	Detect(processPath string) bool
 }
 
 // Node.js Probes
 type NodeEventLoopLagProbe struct{}
 
 func (p *NodeEventLoopLagProbe) GetName() string { return "event_loop_lag" }
+func (p *NodeEventLoopLagProbe) Detect(processPath string) bool { return strings.Contains(processPath, "node") }
 
 func (p *NodeEventLoopLagProbe) Probe(pid int) (*ProbeResult, error) {
 	// Try to get event loop lag from Node.js process
@@ -49,6 +51,7 @@ func (p *NodeEventLoopLagProbe) Probe(pid int) (*ProbeResult, error) {
 type NodeHeapUsageProbe struct{}
 
 func (p *NodeHeapUsageProbe) GetName() string { return "heap_usage" }
+func (p *NodeHeapUsageProbe) Detect(processPath string) bool { return strings.Contains(processPath, "node") }
 
 func (p *NodeHeapUsageProbe) Probe(pid int) (*ProbeResult, error) {
 	// Get heap usage from Node.js process
@@ -71,6 +74,7 @@ func (p *NodeHeapUsageProbe) Probe(pid int) (*ProbeResult, error) {
 type PythonGILProbe struct{}
 
 func (p *PythonGILProbe) GetName() string { return "gil_wait_percent" }
+func (p *PythonGILProbe) Detect(processPath string) bool { return strings.Contains(processPath, "python") }
 
 func (p *PythonGILProbe) Probe(pid int) (*ProbeResult, error) {
 	result := &ProbeResult{
@@ -92,6 +96,7 @@ func (p *PythonGILProbe) Probe(pid int) (*ProbeResult, error) {
 type JavaHeapProbe struct{}
 
 func (p *JavaHeapProbe) GetName() string { return "heap_usage" }
+func (p *JavaHeapProbe) Detect(processPath string) bool { return strings.Contains(processPath, "java") }
 
 func (p *JavaHeapProbe) Probe(pid int) (*ProbeResult, error) {
 	// Use jstat or JMX to get heap usage
@@ -130,6 +135,7 @@ func (p *JavaHeapProbe) Probe(pid int) (*ProbeResult, error) {
 type JavaGCProbe struct{}
 
 func (p *JavaGCProbe) GetName() string { return "gc_stats" }
+func (p *JavaGCProbe) Detect(processPath string) bool { return strings.Contains(processPath, "java") }
 
 func (p *JavaGCProbe) Probe(pid int) (*ProbeResult, error) {
 	result := &ProbeResult{
@@ -151,6 +157,7 @@ func (p *JavaGCProbe) Probe(pid int) (*ProbeResult, error) {
 type GoGoroutinesProbe struct{}
 
 func (p *GoGoroutinesProbe) GetName() string { return "goroutines" }
+func (p *GoGoroutinesProbe) Detect(processPath string) bool { return strings.Contains(processPath, "go") }
 
 func (p *GoGoroutinesProbe) Probe(pid int) (*ProbeResult, error) {
 	// Try to get goroutine count from pprof endpoint
@@ -189,6 +196,7 @@ func (p *GoGoroutinesProbe) Probe(pid int) (*ProbeResult, error) {
 type RustThreadCountProbe struct{}
 
 func (p *RustThreadCountProbe) GetName() string { return "thread_count" }
+func (p *RustThreadCountProbe) Detect(processPath string) bool { return strings.Contains(processPath, "rust") }
 
 func (p *RustThreadCountProbe) Probe(pid int) (*ProbeResult, error) {
 	// Get thread count from /proc/pid/status on Linux
@@ -209,6 +217,7 @@ func (p *RustThreadCountProbe) Probe(pid int) (*ProbeResult, error) {
 type PHPOpcacheProbe struct{}
 
 func (p *PHPOpcacheProbe) GetName() string { return "opcache_stats" }
+func (p *PHPOpcacheProbe) Detect(processPath string) bool { return strings.Contains(processPath, "php") }
 
 func (p *PHPOpcacheProbe) Probe(pid int) (*ProbeResult, error) {
 	result := &ProbeResult{
