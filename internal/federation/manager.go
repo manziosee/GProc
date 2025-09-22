@@ -179,14 +179,14 @@ func (f *FederationManager) hasCapacity(cluster *ClusterConnection, config *type
 	return availableCPU >= requiredCPU && availableMemory >= requiredMemory
 }
 
-func (f *FederationManager) selectRoundRobin(candidates []*ClusterConnection, count int) []*ClusterConnection, error) {
+func (f *FederationManager) selectRoundRobin(candidates []*ClusterConnection, count int) ([]*ClusterConnection, error) {
 	if count > len(candidates) {
 		count = len(candidates)
 	}
 	return candidates[:count], nil
 }
 
-func (f *FederationManager) selectLeastLoaded(candidates []*ClusterConnection, count int) []*ClusterConnection, error) {
+func (f *FederationManager) selectLeastLoaded(candidates []*ClusterConnection, count int) ([]*ClusterConnection, error) {
 	// Sort by CPU usage
 	for i := 0; i < len(candidates)-1; i++ {
 		for j := i + 1; j < len(candidates); j++ {
@@ -202,7 +202,7 @@ func (f *FederationManager) selectLeastLoaded(candidates []*ClusterConnection, c
 	return candidates[:count], nil
 }
 
-func (f *FederationManager) selectByLatency(candidates []*ClusterConnection, count int) []*ClusterConnection, error) {
+func (f *FederationManager) selectByLatency(candidates []*ClusterConnection, count int) ([]*ClusterConnection, error) {
 	// Sort by latency
 	for i := 0; i < len(candidates)-1; i++ {
 		for j := i + 1; j < len(candidates); j++ {

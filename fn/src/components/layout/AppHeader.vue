@@ -17,14 +17,19 @@
       <button @click="$emit('toggle-theme')" class="theme-toggle">
         {{ isDark ? '☀️' : '🌙' }}
       </button>
-      <div class="user-menu">
-        <span>Admin</span>
+      <div class="user-menu" @click="handleLogout">
+        <span>{{ authStore.user?.username || 'User' }}</span>
+        <span class="logout-hint">Click to logout</span>
       </div>
     </div>
   </header>
 </template>
 
 <script setup lang="ts">
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '../../stores/auth'
+import { useMessage } from 'naive-ui'
+
 defineProps<{
   isDark: boolean
 }>()
@@ -33,6 +38,16 @@ defineEmits<{
   'toggle-sidebar': []
   'toggle-theme': []
 }>()
+
+const router = useRouter()
+const authStore = useAuthStore()
+const message = useMessage()
+
+const handleLogout = () => {
+  authStore.logout()
+  message.success('Logged out successfully')
+  router.push('/login')
+}
 </script>
 
 <style scoped>
@@ -121,5 +136,19 @@ defineEmits<{
   background: var(--n-color);
   border-radius: 20px;
   border: 1px solid var(--n-border-color);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.user-menu:hover {
+  background: var(--n-color-hover);
+}
+
+.logout-hint {
+  font-size: 0.7rem;
+  color: var(--n-text-color-3);
+  margin-top: 2px;
 }
 </style>

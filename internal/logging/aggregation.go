@@ -2,7 +2,6 @@ package logging
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"time"
 

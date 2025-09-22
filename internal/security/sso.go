@@ -48,7 +48,7 @@ func NewSSOManager(config *types.SSOConfig) *SSOManager {
 	case "saml":
 		sso.saml = &SAMLProvider{
 			EntityID:    config.EntityID,
-			MetadataURL: config.MetadataURL,
+			MetadataURL: config.MetadataUrl,
 		}
 	}
 	

@@ -12,31 +12,14 @@ import (
 
 type GitOpsManager struct {
 	config      *types.GitOpsConfig
-	repositories map[string]*Repository
+	repositories map[string]*types.Repository
 	syncInterval time.Duration
-}
-
-type Repository struct {
-	Name       string    `json:"name"`
-	URL        string    `json:"url"`
-	Branch     string    `json:"branch"`
-	LocalPath  string    `json:"local_path"`
-	LastSync   time.Time `json:"last_sync"`
-	LastCommit string    `json:"last_commit"`
-}
-
-type GitOpsConfig struct {
-	Enabled      bool              `json:"enabled"`
-	Repositories []Repository      `json:"repositories"`
-	SyncInterval time.Duration     `json:"sync_interval"`
-	AutoDeploy   bool              `json:"auto_deploy"`
-	ConfigPaths  map[string]string `json:"config_paths"`
 }
 
 func NewGitOpsManager(config *types.GitOpsConfig) *GitOpsManager {
 	return &GitOpsManager{
 		config:       config,
-		repositories: make(map[string]*Repository),
+		repositories: make(map[string]*types.Repository),
 		syncInterval: 30 * time.Second,
 	}
 }
@@ -47,11 +30,17 @@ func (g *GitOpsManager) Start(ctx context.Context) error {
 	}
 	
 	// Initialize repositories
-	for _, repo := range g.config.Repositories {
-		if err := g.initRepository(ctx, &repo); err != nil {
+	for _, repoURL := range g.config.Repositories {
+		repo := &types.Repository{
+			Name:   filepath.Base(repoURL),
+			URL:    repoURL,
+			Branch: g.config.Branch,
+			Path:   g.config.Path,
+		}
+		if err := g.initRepository(ctx, repo); err != nil {
 			return fmt.Errorf("failed to initialize repository %s: %v", repo.Name, err)
 		}
-		g.repositories[repo.Name] = &repo
+		g.repositories[repo.Name] = repo
 	}
 	
 	// Start sync loop
@@ -60,20 +49,21 @@ func (g *GitOpsManager) Start(ctx context.Context) error {
 	return nil
 }
 
-func (g *GitOpsManager) initRepository(ctx context.Context, repo *Repository) error {
+func (g *GitOpsManager) initRepository(ctx context.Context, repo *types.Repository) error {
 	// Clone repository if not exists
-	if !g.repositoryExists(repo.LocalPath) {
+	localPath := filepath.Join("/tmp/gitops", repo.Name)
+	if !g.repositoryExists(localPath) {
 		if err := g.cloneRepository(ctx, repo); err != nil {
 			return err
 		}
 	}
 	
 	// Get current commit
-	commit, err := g.getCurrentCommit(repo.LocalPath)
+	commit, err := g.getCurrentCommit(localPath)
 	if err != nil {
 		return err
 	}
-	repo.LastCommit = commit
+	_ = commit // Store commit if needed
 	
 	return nil
 }
@@ -100,36 +90,33 @@ func (g *GitOpsManager) syncAllRepositories(ctx context.Context) {
 	}
 }
 
-func (g *GitOpsManager) syncRepository(ctx context.Context, repo *Repository) error {
+func (g *GitOpsManager) syncRepository(ctx context.Context, repo *types.Repository) error {
 	// Pull latest changes
 	if err := g.pullRepository(ctx, repo); err != nil {
 		return err
 	}
 	
 	// Check for new commits
-	currentCommit, err := g.getCurrentCommit(repo.LocalPath)
+	localPath := filepath.Join("/tmp/gitops", repo.Name)
+	currentCommit, err := g.getCurrentCommit(localPath)
 	if err != nil {
 		return err
 	}
 	
-	if currentCommit != repo.LastCommit {
-		fmt.Printf("New commit detected in %s: %s -> %s\n", repo.Name, repo.LastCommit, currentCommit)
-		
-		// Apply configuration changes
-		if err := g.applyConfigChanges(ctx, repo); err != nil {
-			return err
-		}
-		
-		repo.LastCommit = currentCommit
-		repo.LastSync = time.Now()
+	fmt.Printf("Checking repository %s for changes: %s\n", repo.Name, currentCommit)
+	
+	// Apply configuration changes
+	if err := g.applyConfigChanges(ctx, repo); err != nil {
+		return err
 	}
 	
 	return nil
 }
 
-func (g *GitOpsManager) applyConfigChanges(ctx context.Context, repo *Repository) error {
+func (g *GitOpsManager) applyConfigChanges(ctx context.Context, repo *types.Repository) error {
 	// Find configuration files
-	configFiles, err := g.findConfigFiles(repo.LocalPath)
+	localPath := filepath.Join("/tmp/gitops", repo.Name)
+	configFiles, err := g.findConfigFiles(localPath)
 	if err != nil {
 		return err
 	}
@@ -187,16 +174,18 @@ func (g *GitOpsManager) repositoryExists(path string) bool {
 	return true
 }
 
-func (g *GitOpsManager) cloneRepository(ctx context.Context, repo *Repository) error {
-	cmd := exec.CommandContext(ctx, "git", "clone", "-b", repo.Branch, repo.URL, repo.LocalPath)
+func (g *GitOpsManager) cloneRepository(ctx context.Context, repo *types.Repository) error {
+	localPath := filepath.Join("/tmp/gitops", repo.Name)
+	cmd := exec.CommandContext(ctx, "git", "clone", "-b", repo.Branch, repo.URL, localPath)
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to clone repository: %v", err)
 	}
 	return nil
 }
 
-func (g *GitOpsManager) pullRepository(ctx context.Context, repo *Repository) error {
-	cmd := exec.CommandContext(ctx, "git", "-C", repo.LocalPath, "pull", "origin", repo.Branch)
+func (g *GitOpsManager) pullRepository(ctx context.Context, repo *types.Repository) error {
+	localPath := filepath.Join("/tmp/gitops", repo.Name)
+	cmd := exec.CommandContext(ctx, "git", "-C", localPath, "pull", "origin", repo.Branch)
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to pull repository: %v", err)
 	}

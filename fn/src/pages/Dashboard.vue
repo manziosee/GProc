@@ -2,13 +2,13 @@
   <div class="dashboard">
     <div class="dashboard-header">
       <div class="header-content">
-        <h1 class="dashboard-title">Dashboard</h1>
-        <p class="dashboard-subtitle">Real-time overview of your process ecosystem</p>
+        <h1 class="dashboard-title">Overview</h1>
+        <p class="dashboard-subtitle">Fleet health and activity in real time</p>
       </div>
       <div class="header-actions">
-        <n-button type="primary" size="large">
-          <template #icon><span>⚡</span></template>
-          Quick Deploy
+        <n-button type="primary" size="large" @click="refreshAll">
+          <template #icon><span>↻</span></template>
+          Refresh
         </n-button>
       </div>
     </div>
@@ -17,111 +17,129 @@
       <div class="metric-card running">
         <div class="metric-header">
           <div class="metric-icon">🟢</div>
-          <div class="metric-trend up">+12%</div>
+          <div class="metric-trend up">live</div>
         </div>
-        <div class="metric-value">{{ runningProcesses }}</div>
+        <div class="metric-value">{{ kpis.processes_running }}</div>
         <div class="metric-label">Running Processes</div>
         <div class="metric-footer">
-          <span class="metric-detail">{{ totalProcesses }} total</span>
+          <span class="metric-detail">{{ kpis.processes_total }} total</span>
         </div>
       </div>
       
       <div class="metric-card performance">
         <div class="metric-header">
           <div class="metric-icon">📊</div>
-          <div class="metric-trend down">-3%</div>
+          <div class="metric-trend" :class="kpis.cpu_usage > 70 ? 'down' : 'stable'">{{ kpis.cpu_usage > 70 ? 'high' : 'ok' }}</div>
         </div>
-        <div class="metric-value">{{ cpuUsage }}%</div>
+        <div class="metric-value">{{ kpis.cpu_usage.toFixed(1) }}%</div>
         <div class="metric-label">CPU Usage</div>
         <div class="metric-footer">
-          <span class="metric-detail">8 cores available</span>
+          <span class="metric-detail">cores auto-detected</span>
         </div>
       </div>
       
       <div class="metric-card memory">
         <div class="metric-header">
           <div class="metric-icon">💾</div>
-          <div class="metric-trend up">+5%</div>
+          <div class="metric-trend" :class="kpis.memory_usage > 80 ? 'down' : 'up'">{{ kpis.memory_usage.toFixed(1) }}%</div>
         </div>
-        <div class="metric-value">{{ memoryUsage }}</div>
+        <div class="metric-value">{{ kpis.memory_usage.toFixed(1) }}%</div>
         <div class="metric-label">Memory Usage</div>
         <div class="metric-footer">
-          <span class="metric-detail">16GB total</span>
+          <span class="metric-detail">tracked via Prometheus</span>
         </div>
       </div>
       
       <div class="metric-card uptime">
         <div class="metric-header">
           <div class="metric-icon">⏱️</div>
-          <div class="metric-trend stable">99.9%</div>
+          <div class="metric-trend stable">{{ kpis.uptime }}</div>
         </div>
-        <div class="metric-value">{{ uptime }}</div>
+        <div class="metric-value">SLA</div>
         <div class="metric-label">System Uptime</div>
         <div class="metric-footer">
-          <span class="metric-detail">Last restart: 2d ago</span>
+          <span class="metric-detail">updated live</span>
         </div>
       </div>
     </div>
 
     <div class="dashboard-content">
-      <div class="content-section">
+      <div class="content-section wide">
         <div class="section-header">
-          <h2 class="section-title">Recent Activity</h2>
-          <n-button text>View All</n-button>
+          <h2 class="section-title">Processes</h2>
+          <n-button text @click="refreshProcesses">Reload</n-button>
         </div>
-        <div class="activity-list">
-          <div v-for="activity in recentActivity" :key="activity.id" class="activity-item">
-            <div class="activity-icon" :class="activity.type">{{ activity.icon }}</div>
-            <div class="activity-content">
-              <div class="activity-title">{{ activity.title }}</div>
-              <div class="activity-time">{{ activity.time }}</div>
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      <div class="content-section">
-        <div class="section-header">
-          <h2 class="section-title">Process Health</h2>
-          <n-button text>Manage</n-button>
-        </div>
-        <div class="health-grid">
-          <div v-for="process in processHealth" :key="process.name" class="health-item">
-            <div class="health-status" :class="process.status"></div>
-            <div class="health-info">
-              <div class="health-name">{{ process.name }}</div>
-              <div class="health-details">{{ process.details }}</div>
-            </div>
-          </div>
-        </div>
+        <ProcessTable
+          :items="processes"
+          :onStart="startProcess"
+          :onStop="stopProcess"
+          :onRestart="restartProcess"
+          @refresh="refreshProcesses"
+        />
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { NButton } from 'naive-ui'
+import axios from 'axios'
+import ProcessTable from '../components/ProcessTable.vue'
+import { useWebSocketStore } from '../stores/websocket'
 
-const runningProcesses = ref(8)
-const totalProcesses = ref(12)
-const cpuUsage = ref(34)
-const memoryUsage = ref('2.4GB')
-const uptime = ref('15d 4h')
+type Proc = {
+  id: string
+  name: string
+  pid: number
+  status: string
+  restarts: number
+  start_time?: string
+}
 
-const recentActivity = ref([
-  { id: 1, type: 'success', icon: '✅', title: 'web-server started successfully', time: '2 minutes ago' },
-  { id: 2, type: 'warning', icon: '⚠️', title: 'api-service restarted (high memory)', time: '5 minutes ago' },
-  { id: 3, type: 'info', icon: '📄', title: 'Configuration updated', time: '10 minutes ago' },
-  { id: 4, type: 'success', icon: '🚀', title: 'worker-pool scaled to 4 instances', time: '15 minutes ago' }
-])
+const ws = useWebSocketStore()
 
-const processHealth = ref([
-  { name: 'web-server', status: 'healthy', details: 'Response time: 45ms' },
-  { name: 'api-service', status: 'healthy', details: 'Response time: 32ms' },
-  { name: 'worker-pool', status: 'warning', details: 'High CPU usage' },
-  { name: 'scheduler', status: 'healthy', details: 'Next run: 2h 15m' }
-])
+const processes = ref<Proc[]>([])
+const kpis = ref({ processes_running: 0, processes_total: 0, cpu_usage: 0, memory_usage: 0, uptime: '-' })
+
+async function refreshMetrics() {
+  const { data } = await axios.get('/api/v1/metrics')
+  kpis.value = {
+    processes_running: data.processes_running ?? 0,
+    processes_total: data.processes_total ?? 0,
+    cpu_usage: data.cpu_usage ?? 0,
+    memory_usage: data.memory_usage ?? 0,
+    uptime: data.uptime ?? '-'
+  }
+}
+
+async function refreshProcesses() {
+  const { data } = await axios.get('/api/v1/processes')
+  processes.value = data
+}
+
+function refreshAll() {
+  refreshMetrics()
+  refreshProcesses()
+}
+
+async function startProcess(id: string) {
+  await axios.post(`/api/v1/processes/${id}/start`)
+  refreshProcesses()
+}
+async function stopProcess(id: string) {
+  await axios.post(`/api/v1/processes/${id}/stop`)
+  refreshProcesses()
+}
+async function restartProcess(id: string) {
+  await axios.post(`/api/v1/processes/${id}/restart`)
+  refreshProcesses()
+}
+
+onMounted(() => {
+  refreshAll()
+  if (!ws.connected) ws.connect()
+})
 </script>
 
 <style scoped>
@@ -267,8 +285,12 @@ const processHealth = ref([
 
 .dashboard-content {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 32px;
+}
+
+.content-section.wide {
+  grid-column: 1 / -1;
 }
 
 .content-section {
@@ -290,99 +312,6 @@ const processHealth = ref([
   font-weight: 600;
   color: var(--n-text-color);
   margin: 0;
-}
-
-.activity-list {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.activity-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px;
-  background: var(--n-color);
-  border-radius: 8px;
-  border: 1px solid var(--n-border-color);
-}
-
-.activity-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.875rem;
-}
-
-.activity-icon.success {
-  background: rgba(16, 185, 129, 0.1);
-}
-
-.activity-icon.warning {
-  background: rgba(245, 158, 11, 0.1);
-}
-
-.activity-icon.info {
-  background: rgba(59, 130, 246, 0.1);
-}
-
-.activity-title {
-  font-weight: 500;
-  color: var(--n-text-color);
-  margin-bottom: 2px;
-}
-
-.activity-time {
-  font-size: 0.75rem;
-  color: var(--n-text-color-3);
-}
-
-.health-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.health-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px;
-  background: var(--n-color);
-  border-radius: 8px;
-  border: 1px solid var(--n-border-color);
-}
-
-.health-status {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.health-status.healthy {
-  background: var(--gproc-success);
-  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
-}
-
-.health-status.warning {
-  background: var(--gproc-warning);
-  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.2);
-}
-
-.health-name {
-  font-weight: 500;
-  color: var(--n-text-color);
-  margin-bottom: 2px;
-}
-
-.health-details {
-  font-size: 0.75rem;
-  color: var(--n-text-color-3);
 }
 
 @media (max-width: 768px) {
