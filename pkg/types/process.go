@@ -168,9 +168,11 @@ type LDAPConfig struct {
 }
 
 type SSOConfig struct {
-	Provider   string `json:"provider"`
-	MetadataURL string `json:"metadata_url"`
-	EntityID   string `json:"entity_id"`
+	Enabled     bool   `json:"enabled"`
+	Provider    string `json:"provider"`
+	ClientId    string `json:"client_id"`
+	EntityID    string `json:"entity_id"`
+	MetadataUrl string `json:"metadata_url"`
 }
 
 type MFAConfig struct {
@@ -285,6 +287,9 @@ type PrometheusConfig struct {
 }
 
 type GrafanaConfig struct {
+	Endpoint   string   `json:"endpoint"`
+	APIKey     string   `json:"api_key"`
+	OrgID      int      `json:"org_id"`
 	Dashboards []string `json:"dashboards"`
 }
 
@@ -580,4 +585,149 @@ type ComposeConfig struct {
 	Project     string            `json:"project"`
 	Services    []string          `json:"services"`
 	Env         map[string]string `json:"env"`
+}
+
+// Missing config types
+type CostConfig struct {
+	Enabled  bool   `json:"enabled"`
+	Provider string `json:"provider"`
+	Region   string `json:"region"`
+}
+
+type ResourceRequest struct {
+	CPU          float64 `json:"cpu"`
+	Memory       int64   `json:"memory"`
+	Disk         int64   `json:"disk"`
+	CPURequest   float64 `json:"cpu_request"`
+	MemoryRequest int64  `json:"memory_request"`
+	ProcessCount int     `json:"process_count"`
+}
+
+type DebugConfig struct {
+	Enabled bool   `json:"enabled"`
+	Port    int    `json:"port"`
+	Path    string `json:"path"`
+}
+
+type GitOpsConfig struct {
+	Enabled      bool     `json:"enabled"`
+	Repository   string   `json:"repository"`
+	Repositories []string `json:"repositories"`
+	Branch       string   `json:"branch"`
+	Path         string   `json:"path"`
+}
+
+type HealingConfig struct {
+	Enabled     bool          `json:"enabled"`
+	MaxRetries  int           `json:"max_retries"`
+	Cooldown    time.Duration `json:"cooldown"`
+	MLEnabled   bool          `json:"ml_enabled"`
+}
+
+type ProcessFailure struct {
+	ProcessID string    `json:"process_id"`
+	Type      string    `json:"type"`
+	Reason    string    `json:"reason"`
+	Timestamp time.Time `json:"timestamp"`
+	Retries   int       `json:"retries"`
+}
+
+type HotReloadConfig struct {
+	Enabled   bool     `json:"enabled"`
+	Languages []string `json:"languages"`
+	WatchDirs []string `json:"watch_dirs"`
+}
+
+type MarketplaceConfig struct {
+	Enabled bool   `json:"enabled"`
+	URL     string `json:"url"`
+	APIKey  string `json:"api_key"`
+}
+
+type ServiceMeshConfig struct {
+	Enabled   bool              `json:"enabled"`
+	Provider  string            `json:"provider"`
+	Namespace string            `json:"namespace"`
+	Endpoint  string            `json:"endpoint"`
+	Config    map[string]string `json:"config"`
+}
+
+type AnomalyConfig struct {
+	Enabled     bool          `json:"enabled"`
+	Threshold   float64       `json:"threshold"`
+	Sensitivity float64       `json:"sensitivity"`
+	Window      time.Duration `json:"window"`
+}
+
+type ProfilingConfig struct {
+	Enabled bool   `json:"enabled"`
+	Port    int    `json:"port"`
+	Path    string `json:"path"`
+}
+
+type SDKConfig struct {
+	Enabled   bool     `json:"enabled"`
+	Languages []string `json:"languages"`
+	OutputDir string   `json:"output_dir"`
+}
+
+type ServerlessConfig struct {
+	Enabled   bool              `json:"enabled"`
+	Provider  string            `json:"provider"`
+	AWS       *AWSConfig        `json:"aws"`
+	GCP       *GCPConfig        `json:"gcp"`
+	Functions map[string]string `json:"functions"`
+}
+
+type AWSConfig struct {
+	Region    string `json:"region"`
+	AccessKey string `json:"access_key"`
+	SecretKey string `json:"secret_key"`
+	Role      string `json:"role"`
+}
+
+type GCPConfig struct {
+	Project     string `json:"project"`
+	ProjectID   string `json:"project_id"`
+	Region      string `json:"region"`
+	Credentials string `json:"credentials"`
+}
+
+// Repository type for GitOps
+type Repository struct {
+	Name   string `json:"name"`
+	URL    string `json:"url"`
+	Branch string `json:"branch"`
+	Path   string `json:"path"`
+}
+
+type VisualConfig struct {
+	Enabled bool   `json:"enabled"`
+	Theme   string `json:"theme"`
+	Layout  string `json:"layout"`
+}
+
+type TopologyConfig struct {
+	Enabled bool `json:"enabled"`
+	Layout  string `json:"layout"`
+}
+
+type WorkflowConfig struct {
+	Enabled   bool              `json:"enabled"`
+	Workflows map[string]string `json:"workflows"`
+}
+
+// Federation types
+type FederationConfig struct {
+	Enabled        bool   `json:"enabled"`
+	RoutingStrategy string `json:"routing_strategy"`
+	Clusters       []string `json:"clusters"`
+}
+
+type FederatedProcessConfig struct {
+	ProcessID    string          `json:"process_id"`
+	Replicas     int             `json:"replicas"`
+	ClusterCount int             `json:"cluster_count"`
+	Regions      []string        `json:"regions"`
+	Resources    ResourceRequest `json:"resources"`
 }

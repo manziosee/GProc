@@ -46,6 +46,7 @@ func (rs *RESTServer) Start(ctx context.Context) error {
 	// Authentication endpoints
 	api.HandleFunc("/auth/login", rs.handleLogin).Methods("POST")
 	api.HandleFunc("/auth/refresh", rs.handleRefresh).Methods("POST")
+	api.HandleFunc("/auth/sso/login", rs.handleSSOLogin).Methods("GET")
 	
 	// Process endpoints
 	api.HandleFunc("/processes", rs.authMiddleware(rs.handleListProcesses)).Methods("GET")
@@ -154,6 +155,17 @@ func (rs *RESTServer) handleRefresh(w http.ResponseWriter, r *http.Request) {
 	// Token refresh logic
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"status": "refresh not implemented"})
+}
+
+func (rs *RESTServer) handleSSOLogin(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	// If SSO is configured in security config, we would redirect. For now return a helpful message.
+	resp := map[string]interface{}{
+		"status":  "not_configured",
+		"message": "SSO is not configured. Please configure security.sso in config to enable this endpoint.",
+		"providers": []string{"google", "github", "azure", "okta"},
+	}
+	json.NewEncoder(w).Encode(resp)
 }
 
 func (rs *RESTServer) handleListProcesses(w http.ResponseWriter, r *http.Request) {

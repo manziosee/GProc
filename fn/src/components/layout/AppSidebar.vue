@@ -15,8 +15,8 @@
         v-for="item in menuItems" 
         :key="item.key"
         class="nav-item"
-        :class="{ active: currentPage === item.key }"
-        @click="$emit('navigate', item.key)"
+        :class="{ active: route.name === item.key }"
+        @click="navigateTo(item)"
       >
         <span class="nav-icon">{{ item.icon }}</span>
         <span v-if="!collapsed" class="nav-label">{{ item.label }}</span>
@@ -26,29 +26,41 @@
 </template>
 
 <script setup lang="ts">
+import { useRouter, useRoute } from 'vue-router'
+import { useAuthStore } from '../../stores/auth'
+
 defineProps<{
   collapsed: boolean
-  currentPage: string
 }>()
 
 defineEmits<{
   toggle: []
-  navigate: [page: string]
 }>()
 
+const router = useRouter()
+const route = useRoute()
+const authStore = useAuthStore()
+
 const menuItems = [
-  { key: 'dashboard', label: 'Dashboard', icon: '📊' },
-  { key: 'processes', label: 'Processes', icon: '⚡' },
-  { key: 'logs', label: 'Logs', icon: '📋' },
-  { key: 'monitoring', label: 'Monitoring', icon: '📈' },
-  { key: 'loadbalancer', label: 'Load Balancer', icon: '⚖️' },
-  { key: 'config', label: 'Config', icon: '🔧' },
-  { key: 'scheduler', label: 'Scheduler', icon: '⏰' },
-  { key: 'daemon', label: 'Daemon Status', icon: '🔧' },
-  { key: 'cli', label: 'CLI Reference', icon: '💻' },
-  { key: 'users', label: 'Users', icon: '👥' },
-  { key: 'settings', label: 'Settings', icon: '⚙️' }
+  { key: 'Dashboard', label: 'Dashboard', icon: '📊', route: '/' },
+  { key: 'ProcessManagement', label: 'Processes', icon: '⚡', route: '/processes' },
+  { key: 'ClusterManagement', label: 'Cluster', icon: '🔗', route: '/cluster' },
+  { key: 'Monitoring', label: 'Monitoring', icon: '📈', route: '/monitoring' },
+  { key: 'Deployments', label: 'Deployments', icon: '🚀', route: '/deployments' },
+  { key: 'Scheduler', label: 'Scheduler', icon: '⏰', route: '/scheduler' },
+  { key: 'Security', label: 'Security', icon: '🔒', route: '/security' },
+  { key: 'LogsViewer', label: 'Logs', icon: '📋', route: '/logs' },
+  { key: 'LanguageProbes', label: 'Probes', icon: '🔍', route: '/probes' },
+  { key: 'Templates', label: 'Templates', icon: '📄', route: '/templates' },
+  { key: 'AuditLogs', label: 'Audit', icon: '📝', route: '/audit' },
+  { key: 'BackupRestore', label: 'Backup', icon: '💾', route: '/backup' },
+  { key: 'SecretsManagement', label: 'Secrets', icon: '🔐', route: '/secrets' },
+  { key: 'Settings', label: 'Settings', icon: '⚙️', route: '/settings' }
 ]
+
+const navigateTo = (item: any) => {
+  router.push(item.route)
+}
 </script>
 
 <style scoped>
