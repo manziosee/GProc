@@ -6,12 +6,14 @@
 ![SQLite](https://img.shields.io/badge/sqlite-%2307405e.svg?style=for-the-badge&logo=sqlite&logoColor=white)
 ![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white)
 ![Kubernetes](https://img.shields.io/badge/kubernetes-%23326ce5.svg?style=for-the-badge&logo=kubernetes&logoColor=white)
+![Fly.io](https://img.shields.io/badge/fly.io-%23000000.svg?style=for-the-badge&logo=fly.io&logoColor=white)
 
 **🎯 A production-ready process manager and orchestration platform built in Go**
 
 *Beyond PM2 - Enterprise-grade process management with distributed capabilities*
 
 [![GitHub](https://img.shields.io/badge/GitHub-Repository-181717?style=for-the-badge&logo=github)](https://github.com/manziosee/GProc.git)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Visit%20App-6366f1?style=for-the-badge&logo=fly.io&logoColor=white)](https://gproc-frontend-demo.fly.dev/)
 
 **👨‍💻 Developed by:** [Manzi Osee](mailto:manziosee3@gmail.com)  
 **📧 Contact:** manziosee3@gmail.com
@@ -202,12 +204,22 @@ GProc isn't just another process manager - it's a **complete orchestration platf
 - ✅ **Enterprise Environments**: Security + compliance features
 - ✅ **Container Workloads**: Basic Docker integration
 - ✅ **Monitoring & Alerting**: Full observability stack
+- ✅ **Cloud Deployment**: Live demo on Fly.io with full functionality
 
 ---
 
 ## 🚀 **Quick Start**
 
-### 📦 **Installation**
+### 🌐 **Live Demo**
+**Try GProc now without installation:**
+
+🔗 **[https://gproc-frontend-demo.fly.dev/](https://gproc-frontend-demo.fly.dev/)**
+
+- **Register**: Create your account with username/email/password
+- **Login**: Access the full dashboard with all features
+- **Explore**: Complete process management, monitoring, and enterprise features
+
+### 📦 **Local Installation**
 ```bash
 # Clone the repository
 git clone https://github.com/manziosee/GProc.git
@@ -529,6 +541,7 @@ GProc/
 | **Web Server** | ![HTTP](https://img.shields.io/badge/HTTP-009639?style=flat&logo=go&logoColor=white) | Native Go HTTP server |
 | **Containers** | ![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat&logo=docker&logoColor=white) | Container management |
 | **Orchestration** | ![Kubernetes](https://img.shields.io/badge/Kubernetes-326CE5?style=flat&logo=kubernetes&logoColor=white) | K8s operator mode |
+| **Deployment** | ![Fly.io](https://img.shields.io/badge/Fly.io-000000?style=flat&logo=fly.io&logoColor=white) | Cloud deployment platform |
 
 </div>
 

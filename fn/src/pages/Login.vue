@@ -19,15 +19,21 @@
     <div class="panel right">
       <div class="card">
         <div class="card-header">
-          <div class="badge">Welcome back</div>
-          <h2>Sign in to your console</h2>
-          <p>Use your GProc credentials to continue</p>
+          <div class="badge">{{ isRegisterMode ? 'Get started' : 'Welcome back' }}</div>
+          <h2>{{ isRegisterMode ? 'Create your account' : 'Sign in to your console' }}</h2>
+          <p>{{ isRegisterMode ? 'Join GProc to manage your processes' : 'Use your GProc credentials to continue' }}</p>
         </div>
 
-        <n-form ref="formRef" :model="form" :rules="rules" @submit.prevent="handleLogin">
+        <n-form ref="formRef" :model="form" :rules="rules" @submit.prevent="isRegisterMode ? handleRegister : handleLogin">
           <n-form-item path="username" label="Username">
             <n-input v-model:value="form.username" placeholder="Enter username" size="large">
               <template #prefix>👤</template>
+            </n-input>
+          </n-form-item>
+
+          <n-form-item v-if="isRegisterMode" path="email" label="Email">
+            <n-input v-model:value="form.email" placeholder="Enter email" size="large">
+              <template #prefix>📧</template>
             </n-input>
           </n-form-item>
 
@@ -37,21 +43,28 @@
             </n-input>
           </n-form-item>
 
-          <n-form-item v-if="showMFA" path="mfaCode" label="MFA Code">
+          <n-form-item v-if="!isRegisterMode && showMFA" path="mfaCode" label="MFA Code">
             <n-input v-model:value="form.mfaCode" placeholder="Enter 6‑digit code" size="large">
               <template #prefix>🧩</template>
             </n-input>
           </n-form-item>
 
-          <div class="row">
+          <div class="row" v-if="!isRegisterMode">
             <n-checkbox v-model:checked="remember">Remember me</n-checkbox>
             <a class="link" href="#">Forgot password?</a>
           </div>
 
-          <n-button type="primary" block size="large" :loading="loading" @click="handleLogin">
-            {{ showMFA ? 'Verify MFA' : 'Sign in' }}
+          <n-button type="primary" block size="large" :loading="loading" @click="isRegisterMode ? handleRegister : handleLogin">
+            {{ isRegisterMode ? 'Create Account' : (showMFA ? 'Verify MFA' : 'Sign in') }}
           </n-button>
         </n-form>
+
+        <div class="toggle">
+          <span>{{ isRegisterMode ? 'Already have an account?' : "Don't have an account?" }}</span>
+          <a class="link" @click="isRegisterMode = !isRegisterMode">
+            {{ isRegisterMode ? 'Sign in' : 'Register' }}
+          </a>
+        </div>
 
         <div class="sso" v-if="ssoEnabled">
           <n-divider>Or continue with</n-divider>
@@ -75,6 +88,7 @@ const message = useMessage()
 const loading = ref(false)
 const showMFA = ref(false)
 const ssoEnabled = ref(true)
+const isRegisterMode = ref(false)
 
 // match template ref
 const formRef = ref()
@@ -82,14 +96,33 @@ const remember = ref(true)
 
 const form = reactive({
   username: '',
+  email: '',
   password: '',
   mfaCode: ''
 })
 
-const rules = {
+const rules = reactive({
   username: { required: true, message: 'Username is required' },
+  email: { required: () => isRegisterMode.value, message: 'Email is required' },
   password: { required: true, message: 'Password is required' },
-  mfaCode: { required: showMFA.value, message: 'MFA code is required' }
+  mfaCode: { required: () => showMFA.value, message: 'MFA code is required' }
+})
+
+const handleRegister = async () => {
+  loading.value = true
+  try {
+    const result = await authStore.register(form.username, form.password, form.email)
+    
+    if (result.success) {
+      message.success('Registration successful! Please sign in.')
+      isRegisterMode.value = false
+      form.email = ''
+    } else {
+      message.error(result.error || 'Registration failed')
+    }
+  } finally {
+    loading.value = false
+  }
 }
 
 const handleLogin = async () => {
@@ -112,7 +145,7 @@ const handleLogin = async () => {
 }
 
 const handleSSOLogin = () => {
-  window.location.href = '/api/v1/auth/sso/login'
+  window.location.href = 'https://gproc-backend-demo.fly.dev/api/v1/auth/sso/login'
 }
 </script>
 
@@ -154,6 +187,8 @@ const handleSSOLogin = () => {
 }
 
 .sso { margin-top: 16px; }
+.toggle { margin-top: 16px; text-align: center; color: var(--n-text-color-3); font-size: 14px; }
+.toggle .link { margin-left: 4px; cursor: pointer; }
 
 @media (max-width: 980px) {
   .login { grid-template-columns: 1fr; }

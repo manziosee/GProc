@@ -9,8 +9,9 @@ export const useWebSocketStore = defineStore('websocket', () => {
   const realTimeData = ref<any>({})
 
   const connect = (_token?: string) => {
-    // Backend WS is Gorilla WebSocket at /api/v1/ws
-    const url = `ws://${location.hostname}:8080/api/v1/ws`
+    // Force production WebSocket URL for demo
+    const wsUrl = 'wss://gproc-backend-demo.fly.dev'
+    const url = `${wsUrl}/api/v1/ws`
 
     if (socket.value) {
       socket.value.close()

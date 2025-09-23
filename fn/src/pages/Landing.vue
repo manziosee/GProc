@@ -30,11 +30,13 @@
         </div>
 
         <div class="trust">
-          <span>Trusted by ops teams</span>
+          <span>Backend: <span :class="isBackendHealthy ? 'status-ok' : 'status-error'">{{ isBackendHealthy ? 'Connected' : 'Connecting...' }}</span></span>
           <div class="dots">
-            <i></i><i></i><i></i><i></i>
+            <i :class="{ active: isBackendHealthy }"></i><i></i><i></i><i></i>
           </div>
         </div>
+        
+
       </div>
 
       <div class="preview">
@@ -98,10 +100,12 @@
 import { useRouter } from 'vue-router'
 import { useLocalStorage } from '@vueuse/core'
 import { NButton } from 'naive-ui'
+import { useHealthCheck } from '../composables/useHealthCheck'
 
 const router = useRouter()
 const year = new Date().getFullYear()
 const isDark = useLocalStorage('gproc-theme', true)
+const { isBackendHealthy } = useHealthCheck()
 
 const demo = `App name      id  mode   pid    status   restart  uptime  memory  watching\napi-service   0   cluster 27387  online   0        2m      35.5MB  disabled\nweb-frontend  1   fork    27390  online   0        2m      26.1MB  enabled\nworker        2   fork    27292  online   0        2m      24.9MB  disabled`
 
@@ -139,6 +143,11 @@ const toggleTheme = () => {
 .trust { display: flex; align-items: center; gap: 12px; margin-top: 18px; color: #91a4c9; font-size: 14px; }
 .trust .dots { display: flex; gap: 6px; }
 .trust .dots i { width: 6px; height: 6px; border-radius: 999px; background: rgba(148,163,184,.5); display: inline-block; }
+.trust .dots i.active { background: #22c55e; }
+.status-ok { color: #22c55e; font-weight: 600; }
+.status-error { color: #ef4444; font-weight: 600; }
+
+
 
 .preview { position: relative; height: 380px; border-radius: 16px; background: linear-gradient(180deg, rgba(2,6,23,.75), rgba(2,6,23,.4)); border: 1px solid rgba(148,163,184,.15); overflow: hidden; box-shadow: 0 25px 60px rgba(0,0,0,.35); }
 .preview-inner { position: absolute; inset: 0; display: flex; flex-direction: column; }

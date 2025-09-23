@@ -84,7 +84,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { NButton } from 'naive-ui'
-import axios from 'axios'
+import api from '../config/api'
 import ProcessTable from '../components/ProcessTable.vue'
 import { useWebSocketStore } from '../stores/websocket'
 
@@ -103,19 +103,28 @@ const processes = ref<Proc[]>([])
 const kpis = ref({ processes_running: 0, processes_total: 0, cpu_usage: 0, memory_usage: 0, uptime: '-' })
 
 async function refreshMetrics() {
-  const { data } = await axios.get('/api/v1/metrics')
-  kpis.value = {
-    processes_running: data.processes_running ?? 0,
-    processes_total: data.processes_total ?? 0,
-    cpu_usage: data.cpu_usage ?? 0,
-    memory_usage: data.memory_usage ?? 0,
-    uptime: data.uptime ?? '-'
+  try {
+    const { data } = await api.get('/api/v1/metrics')
+    kpis.value = {
+      processes_running: data.processes_running ?? 0,
+      processes_total: data.processes_total ?? 0,
+      cpu_usage: data.cpu_usage ?? 0,
+      memory_usage: data.memory_usage ?? 0,
+      uptime: data.uptime ?? '-'
+    }
+  } catch (error) {
+    console.error('Failed to fetch metrics:', error)
   }
 }
 
 async function refreshProcesses() {
-  const { data } = await axios.get('/api/v1/processes')
-  processes.value = data
+  try {
+    const { data } = await api.get('/api/v1/processes')
+    processes.value = data || []
+  } catch (error) {
+    console.error('Failed to fetch processes:', error)
+    processes.value = []
+  }
 }
 
 function refreshAll() {
@@ -124,16 +133,28 @@ function refreshAll() {
 }
 
 async function startProcess(id: string) {
-  await axios.post(`/api/v1/processes/${id}/start`)
-  refreshProcesses()
+  try {
+    await api.post(`/api/v1/processes/${id}/start`)
+    refreshProcesses()
+  } catch (error) {
+    console.error('Failed to start process:', error)
+  }
 }
 async function stopProcess(id: string) {
-  await axios.post(`/api/v1/processes/${id}/stop`)
-  refreshProcesses()
+  try {
+    await api.post(`/api/v1/processes/${id}/stop`)
+    refreshProcesses()
+  } catch (error) {
+    console.error('Failed to stop process:', error)
+  }
 }
 async function restartProcess(id: string) {
-  await axios.post(`/api/v1/processes/${id}/restart`)
-  refreshProcesses()
+  try {
+    await api.post(`/api/v1/processes/${id}/restart`)
+    refreshProcesses()
+  } catch (error) {
+    console.error('Failed to restart process:', error)
+  }
 }
 
 onMounted(() => {

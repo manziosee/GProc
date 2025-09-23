@@ -1,0 +1,11 @@
+fn/
+desktop-app/
+mobile-app/
+*.md
+.git/
+.gitignore
+logs/
+*.log
+node_modules/
+dist/
+build/
