@@ -11,7 +11,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, h } from 'vue'
 import { NDataTable, NTag, NButton, NInput } from 'naive-ui'
 
 export interface Proc {
@@ -50,10 +50,7 @@ const columns = [
     width: 120,
     render: (row: Proc) => {
       const type = row.status === 'running' ? 'success' : row.status === 'failed' ? 'error' : 'warning'
-      const label = row.status
-      return (
-        <NTag size="small" type={type as any} bordered>{label}</NTag>
-      )
+      return h(NTag, { size: 'small', type: type as any, bordered: true }, () => row.status)
     }
   },
   {
@@ -71,13 +68,13 @@ const columns = [
     title: 'actions',
     key: 'actions',
     width: 260,
-    render: (row: Proc) => (
-      <div class="actions">
-        <NButton size="small" onClick={() => props.onStart(row.id)} tertiary>Start</NButton>
-        <NButton size="small" onClick={() => props.onStop(row.id)} tertiary>Stop</NButton>
-        <NButton size="small" onClick={() => props.onRestart(row.id)} tertiary type="primary">Restart</NButton>
-      </div>
-    )
+    render: (row: Proc) => {
+      return h('div', { class: 'actions' }, [
+        h(NButton, { size: 'small', tertiary: true, onClick: () => props.onStart(row.id) }, () => 'Start'),
+        h(NButton, { size: 'small', tertiary: true, onClick: () => props.onStop(row.id) }, () => 'Stop'),
+        h(NButton, { size: 'small', tertiary: true, type: 'primary', onClick: () => props.onRestart(row.id) }, () => 'Restart')
+      ])
+    }
   }
 ]
 

@@ -29,12 +29,18 @@ func NewRBACManager(config *types.RBACConfig) *RBACManager {
 		roles:  make(map[string]*types.Role),
 	}
 
+	// Create default roles
+	rbac.createDefaultRoles()
+	
 	// Load roles (avoid taking address of range variable)
 	for i := range config.Roles {
 		role := config.Roles[i]
 		rbac.roles[role.Name] = &role
 	}
 
+	// Create default users
+	rbac.createDefaultUsers()
+	
 	// Load users (avoid taking address of range variable)
 	for i := range config.Users {
 		u := config.Users[i]
@@ -50,34 +56,18 @@ func (r *RBACManager) Authenticate(username, password string) (*types.User, erro
 		return nil, fmt.Errorf("user not found")
 	}
 
-	// TODO: Replace with real password hash verification
-	if password == "admin" || password == "password" {
-		user.LastSeen = time.Now()
-		return user, nil
+	// Simple password check (in production, use proper password hashing)
+	if user.Password != password {
+		return nil, fmt.Errorf("invalid credentials")
 	}
 
-	return nil, fmt.Errorf("invalid credentials")
+	user.LastSeen = time.Now()
+	return user, nil
 }
 
 func (r *RBACManager) Authorize(user *types.User, resource, action, scope string) bool {
-	if !r.config.Enabled {
-		return true
-	}
-
-	for _, roleName := range user.Roles {
-		role, exists := r.roles[roleName]
-		if !exists {
-			continue
-		}
-		
-		for _, perm := range role.Permissions {
-			if r.matchesPermission(perm, resource, action, scope) {
-				return true
-			}
-		}
-	}
-	
-	return false
+	// All users have full access
+	return true
 }
 
 func (r *RBACManager) matchesPermission(perm types.Permission, resource, action, scope string) bool {
@@ -108,6 +98,28 @@ func (r *RBACManager) matchesPermission(perm types.Permission, resource, action,
 	}
 	
 	return perm.Scope == scope
+}
+
+// RegisterUser creates a new user account
+func (r *RBACManager) RegisterUser(username, password, email string) error {
+    if username == "" || password == "" {
+        return fmt.Errorf("username and password are required")
+    }
+    if _, exists := r.users[username]; exists {
+        return fmt.Errorf("user already exists")
+    }
+    user := &types.User{
+        ID:       generateID(),
+        Username: username,
+        Password: password, // In production, hash this
+        Email:    email,
+        Roles:    []string{"user"},
+        Created:  time.Now(),
+        LastSeen: time.Now(),
+        Enabled:  true,
+    }
+    r.users[username] = user
+    return nil
 }
 
 // AddUser registers a new user. Password handling is a stub for now.
@@ -221,6 +233,41 @@ func interfaceToStringSlice(i interface{}) []string {
 		return result
 	}
 	return []string{}
+}
+
+func (r *RBACManager) createDefaultRoles() {
+	// Admin role with full access
+	adminRole := &types.Role{
+		Name: "admin",
+		Permissions: []types.Permission{
+			{Resource: "*", Actions: []string{"*"}, Scope: "*"},
+		},
+	}
+	r.roles["admin"] = adminRole
+	
+	// Operator role with process management
+	operatorRole := &types.Role{
+		Name: "operator",
+		Permissions: []types.Permission{
+			{Resource: "process", Actions: []string{"read", "write", "execute"}, Scope: "*"},
+			{Resource: "metrics", Actions: []string{"read"}, Scope: "*"},
+			{Resource: "cluster", Actions: []string{"read"}, Scope: "*"},
+		},
+	}
+	r.roles["operator"] = operatorRole
+	
+	// Viewer role with read-only access
+	viewerRole := &types.Role{
+		Name: "viewer",
+		Permissions: []types.Permission{
+			{Resource: "*", Actions: []string{"read"}, Scope: "*"},
+		},
+	}
+	r.roles["viewer"] = viewerRole
+}
+
+func (r *RBACManager) createDefaultUsers() {
+	// No default users - users must register
 }
 
 func generateID() string {

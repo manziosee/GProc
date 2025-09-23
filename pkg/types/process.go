@@ -133,6 +133,7 @@ type Permission struct {
 type User struct {
 	ID       string    `json:"id"`
 	Username string    `json:"username"`
+	Password string    `json:"-"` // Don't serialize password
 	Email    string    `json:"email"`
 	Roles    []string  `json:"roles"`
 	Created  time.Time `json:"created"`
