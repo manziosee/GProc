@@ -35,6 +35,20 @@ func main() {
 		logsCmd(),
 		restartCmd(),
 		daemonCmd(),
+		// Advanced commands
+		webCmd(),
+		templateCmd(),
+		clusterCmd(),
+		monitCmd(),
+		deployCmd(),
+		metricsCmd(),
+		alertsCmd(),
+		profileCmd(),
+		rbacCmd(),
+		auditCmd(),
+		secretsCmd(),
+		tlsCmd(),
+		pluginCmd(),
 	)
 
 	if err := rootCmd.Execute(); err != nil {

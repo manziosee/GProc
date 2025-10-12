@@ -10,7 +10,7 @@ COPY internal/ internal/
 COPY pkg/ pkg/
 COPY *.go ./
 
-RUN CGO_ENABLED=0 GOOS=linux go build -o gproc cmd/main.go cmd/daemon.go
+RUN CGO_ENABLED=0 GOOS=linux go build -o gproc cmd/*.go
 
 FROM alpine:latest
 RUN apk --no-cache add ca-certificates
